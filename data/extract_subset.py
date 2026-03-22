@@ -1,4 +1,7 @@
+# Extract sub-dataset by random from the songs csv.file
+# Chopped out 8000 songs by random
 import pandas as pd
+
 
 def extract_random_subset(input_path, output_path, n_rows=8000, seed=42):
     chunk_size = 50000

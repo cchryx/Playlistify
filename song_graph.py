@@ -9,6 +9,7 @@ Copyright (c) 2026 Xing Xu Chen, Tianqi Pan, Norah Liu, Denise Ma
 from __future__ import annotations
 
 import csv
+import math
 from dataclasses import dataclass, field
 
 # TODO: check all docstrings in the file
@@ -80,7 +81,7 @@ class SongGraph:
         - _vertices: A collection of the vertices contained in this graph.
                      Maps song track_id to the _Vertex object.
     """
-    _vertices: dict[str, _SongVertex] = field(default_factory=dict)
+    _vertices: dict[str, _SongVertex]
 
     def add_vertex(self, song: Song) -> None:
         """Add a vertex representing the given song to this graph.
@@ -97,12 +98,12 @@ class SongGraph:
         Raise a ValueError if either track_id does not exist in the graph.
         """
         if track_id1 in self._vertices and track_id2 in self._vertices:
-            v1 = self._vertices[track_id1]
-            v2 = self._vertices[track_id2]
+            if weight >= 0.75:  # the value can be modified later
+                v1 = self._vertices[track_id1]
+                v2 = self._vertices[track_id2]
 
-            v1.neighbours[v2] = weight
-            v2.neighbours[v1] = weight
-
+                v1.neighbours[v2] = weight
+                v2.neighbours[v1] = weight
         else:
             raise ValueError("One or both track IDs not found in graph.")
 
@@ -115,6 +116,66 @@ class SongGraph:
     def get_all_songs(self) -> list[Song]:
         """Return a list of all Song objects in the graph."""
         return [v.item for v in self._vertices.values()]
+
+    def get_cosine_similarity(self, track_id1: str, track_id2: str) -> float:
+        """
+        Return the cosine similarity value of two songs in the graph
+        Raise a ValueError if item1 or item2 do not appear as vertices in this graph.
+        When evaluating the similarity of songs, the following features are taken into consideration:
+        - danceability
+        - energy
+        - valence
+        - tempo
+        - acousticness
+        - instrumentalness
+        - loudnness
+        - speechiness
+        """
+        if track_id1 not in self._vertices or track_id2 not in self._vertices:
+            raise ValueError
+        else:
+            song_1 = self._vertices[track_id1].item
+            song_2 = self._vertices[track_id2].item
+
+            vector_1 = [song_1.danceability,
+                        song_1.energy,
+                        song_1.valence,
+                        song_1.tempo,
+                        song_1.acousticness,
+                        song_1.instrumentalness,
+                        song_1.loudness,
+                        song_1.speechiness]
+            vector_2 = [song_2.danceability,
+                        song_2.energy,
+                        song_2.valence,
+                        song_2.tempo,
+                        song_2.acousticness,
+                        song_2.instrumentalness,
+                        song_2.loudness,
+                        song_2.speechiness]
+
+            dot_product = sum(vector_1[i] * vector_2[i] for i in range(len(vector_1)))
+
+            norm_1 = math.sqrt(sum(v ** 2 for v in vector_1))
+            norm_2 = math.sqrt(sum(v ** 2 for v in vector_2))
+
+            if norm_1 == 0 or norm_2 == 0:
+                return 0.0
+            else:
+                return round(dot_product / (norm_1 * norm_2), 3)
+
+    def get_weight(self, track_id1: str, track_id2: str) -> float:
+        """
+        Return the weight of edge between the given two songs
+        Return 0.0 if the two songs are not adjcent to each other in the graph
+
+        Preconditions:
+            - TODO:
+        """
+        ...
+        song_1_vertex = self._vertices[track_id1]
+        song_2_vertex = self._vertices[track_id2]
+        return song_1_vertex.neighbours.get(song_2_vertex, 0.0)
 
 
 def load_song_data(song_file: str) -> SongGraph:

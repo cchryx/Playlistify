@@ -122,7 +122,7 @@ GENRE_HIERARCHY = {
 }
 
 
-class Genre_Tree:
+class GenreTree:
     """A tree representing a hierarchical organization of music genres.
 
     Each node in the tree corresponds to a genre label, and may contain
@@ -141,9 +141,9 @@ class Genre_Tree:
 
     _genre: str
     songs: list[str]
-    _subtrees: list[Genre_Tree]
+    _subtrees: list[GenreTree]
 
-    def __init__(self, genre: Optional[Any], subtrees: list[Genre_Tree]) -> None:
+    def __init__(self, genre: Optional[Any], subtrees: list[GenreTree]) -> None:
         """Initialize a new Genre_Tree with the given genre label and subtrees.
 
         The songs list is initialized as empty. Use other methods to populate it.
@@ -162,18 +162,18 @@ class Genre_Tree:
         """
         return self._genre is None
 
-    def add_subtree(self, subtree: Genre_Tree) -> None:
+    def add_subtree(self, subtree: GenreTree) -> None:
         """Add the given subtree as a sub-genre of this Genre_Tree.
 
         Do nothing if the given subtree is empty.
         """
         self._subtrees.append(subtree)
 
-    def get_subtrees(self) -> list[Genre_Tree]:
+    def get_subtrees(self) -> list[GenreTree]:
         """Return the list of subtrees (sub-genres) of this Genre_Tree."""
         return self._subtrees
 
-    def find(self, genre: str) -> Optional[Genre_Tree]:
+    def find(self, genre: str) -> Optional[GenreTree]:
         """Return the Genre_Tree node matching the given genre label, or None if not found.
 
         Search is performed recursively across all subtrees.
@@ -213,17 +213,17 @@ class Genre_Tree:
         return result
 
 
-def build_genre_tree() -> Genre_Tree:
+def build_genre_tree() -> GenreTree:
     """Build and return a Genre_Tree using the predefined GENRE_HIERARCHY mapping.
 
     The root node represents the entire music collection. Each genre in
     GENRE_HIERARCHY is inserted under its designated parent category.
     """
-    nodes: dict[str, Genre_Tree] = {}
+    nodes: dict[str, GenreTree] = {}
     for genre in GENRE_HIERARCHY:
-        nodes[genre] = Genre_Tree(genre, [])
+        nodes[genre] = GenreTree(genre, [])
 
-    root = Genre_Tree('root', [])
+    root = GenreTree('root', [])
 
     for genre, parent in GENRE_HIERARCHY.items():
         if parent == 'root':
@@ -234,7 +234,7 @@ def build_genre_tree() -> Genre_Tree:
     return root
 
 
-def create_genre_tree(data: str) -> Genre_Tree:
+def create_genre_tree(data: str) -> GenreTree:
     """Build a Genre_Tree from the CSV file at the given filepath.
 
     Each song in the CSV is added to the node matching its genre label.

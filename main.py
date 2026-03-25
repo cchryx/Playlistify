@@ -1,16 +1,13 @@
-# This is a sample Python script.
+"""
+CSC111 Project: Playlistify (Mood-Aware Music Recommendation Engine)
 
-# Press ⌃R to execute it or replace it with your code.
-# Press Double ⇧ to search everywhere for classes, files, tool windows, actions, and settings.
+This module contains the _Vertex and Song classes to represent music data in a graph,
+along with the Graph dataclass for managing connections between songs.
+
+Copyright (c) 2026 Xing Xu Chen, Tianqi Pan, Norah Liu, Denise Ma
+"""
+
+import genre_tree
+import song_graph
 
 
-def print_hi(name):
-    # Use a breakpoint in the code line below to debug your script.
-    print(f'Hi, {name}')  # Press ⌘F8 to toggle the breakpoint.
-
-
-# Press the green button in the gutter to run the script.
-if __name__ == '__main__':
-    print_hi('PyCharm')
-
-# See PyCharm help at https://www.jetbrains.com/help/pycharm/

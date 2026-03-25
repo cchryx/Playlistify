@@ -98,12 +98,12 @@ class SongGraph:
         Raise a ValueError if either track_id does not exist in the graph.
         """
         if track_id1 in self._vertices and track_id2 in self._vertices:
-            v1 = self._vertices[track_id1]
-            v2 = self._vertices[track_id2]
+            if weight >= 0.75:  # the value can be modified later
+                v1 = self._vertices[track_id1]
+                v2 = self._vertices[track_id2]
 
-            v1.neighbours[v2] = weight
-            v2.neighbours[v1] = weight
-
+                v1.neighbours[v2] = weight
+                v2.neighbours[v1] = weight
         else:
             raise ValueError("One or both track IDs not found in graph.")
 
@@ -163,6 +163,19 @@ class SongGraph:
                 return 0.0
             else:
                 return round(dot_product / (norm_1 * norm_2), 3)
+
+    def get_weight(self, track_id1: str, track_id2: str) -> float:
+        """
+        Return the weight of edge between the given two songs
+        Return 0.0 if the two songs are not adjcent to each other in the graph
+
+        Preconditions:
+            - TODO:
+        """
+        ...
+        song_1_vertex = self._vertices[track_id1]
+        song_2_vertex = self._vertices[track_id2]
+        return song_1_vertex.neighbours.get(song_2_vertex, 0.0)
 
 
 def load_song_data(song_file: str) -> SongGraph:

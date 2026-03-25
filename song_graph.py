@@ -80,7 +80,7 @@ class SongGraph:
         - _vertices: A collection of the vertices contained in this graph.
                      Maps song track_id to the _Vertex object.
     """
-    _vertices: dict[str, _SongVertex] = field(default_factory=dict)
+    _vertices: dict[str, _SongVertex]
 
     def add_vertex(self, song: Song) -> None:
         """Add a vertex representing the given song to this graph.

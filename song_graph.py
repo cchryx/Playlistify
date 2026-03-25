@@ -98,7 +98,7 @@ class SongGraph:
         Raise a ValueError if either track_id does not exist in the graph.
         """
         if track_id1 in self._vertices and track_id2 in self._vertices:
-            if weight >= 0.75:  # the value can be modified later
+            if weight >= 0.75:  # TODO:the value can be modified later
                 v1 = self._vertices[track_id1]
                 v2 = self._vertices[track_id2]
 

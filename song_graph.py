@@ -61,7 +61,7 @@ class _SongVertex:
 
     """
     item: Song
-    neighbours: dict[_SongVertex, int]
+    neighbours: dict[_SongVertex, float]
 
     def __init__(self, item: Song) -> None:
         """Initialize a new vertex with the given Song item."""
@@ -91,7 +91,7 @@ class SongGraph:
         if song.track_id not in self._vertices:
             self._vertices[song.track_id] = _SongVertex(song)
 
-    def add_edge(self, track_id1: str, track_id2: str, weight: int = 1) -> None:
+    def add_edge(self, track_id1: str, track_id2: str, weight: float = 1.0) -> None:
         """Add an edge between the two songs with the given track_ids, with the given weight.
         Default weight is 1
 
@@ -116,6 +116,10 @@ class SongGraph:
     def get_all_songs(self) -> list[Song]:
         """Return a list of all Song objects in the graph."""
         return [v.item for v in self._vertices.values()]
+
+    def get_all_song_ids(self) -> list[str]:
+        """Return a list of all Song IDs in the graph."""
+        return list(self._vertices.keys())
 
     def get_cosine_similarity(self, track_id1: str, track_id2: str) -> float:
         """
@@ -220,7 +224,18 @@ def load_song_data(song_file: str) -> SongGraph:
 
         song_graph.add_vertex(song_object)
 
-        # TODO: Add edge, which is the weight. Need weight/similarity calculation first
+    # Minimum cosine similarity required to create an edge between two songs
+    similarity_threshold = 0.75
+
+    # Compare every pair of songs and add an edge if similarity exceeds the threshold.
+    # This is O(n^2) — expected for a similarity graph over all songs.
+    all_ids = song_graph.get_all_song_ids()
+    for i in range(len(all_ids)):
+        for j in range(i + 1, len(all_ids)):  # j starts at i+1 to avoid duplicates and self-comparisons
+            id1, id2 = all_ids[i], all_ids[j]
+            similarity = song_graph.get_cosine_similarity(id1, id2)
+            if similarity >= similarity_threshold:
+                song_graph.add_edge(id1, id2, similarity)
 
     return song_graph
 

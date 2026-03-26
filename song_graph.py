@@ -194,7 +194,7 @@ def load_song_data(song_file: str) -> SongGraph:
 
     """
 
-    with open(song_file, 'r') as file:
+    with open(song_file) as file:
         reader = csv.reader(file)
         next(reader)
         songs = list(reader)
@@ -238,6 +238,11 @@ def load_song_data(song_file: str) -> SongGraph:
                 song_graph.add_edge(id1, id2, similarity)
 
     return song_graph
+
+
+if __name__ == '__main__':
+    song_graph = load_song_data('data/spotify_data.csv')
+    print(len(song_graph.get_all_song_ids()))
 
 # from pathlib import Path
 # code for testing load_song_data

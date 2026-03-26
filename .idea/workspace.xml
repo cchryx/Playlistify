@@ -5,14 +5,8 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="85ab3172-9842-4500-b342-ddf83f9dbb06" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/data/song_file_cleaning.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/song_tree_visualization.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/dbnavigator.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/dbnavigator.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/data/extract_subset.py" beforeDir="false" afterPath="$PROJECT_DIR$/data/extract_subset.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/data/songs_subset.csv" beforeDir="false" afterPath="$PROJECT_DIR$/data/unfiltered_song_file.csv" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/song_graph.py" beforeDir="false" afterPath="$PROJECT_DIR$/song_graph.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/song_tree.py" beforeDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -45,21 +39,21 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent">{
-  &quot;keyToString&quot;: {
-    &quot;ModuleVcsDetector.initialDetectionPerformed&quot;: &quot;true&quot;,
-    &quot;Python.downloaded_data.executor&quot;: &quot;Run&quot;,
-    &quot;Python.extract_subset.executor&quot;: &quot;Run&quot;,
-    &quot;Python.main.executor&quot;: &quot;Run&quot;,
-    &quot;Python.song_file_cleaning.executor&quot;: &quot;Run&quot;,
-    &quot;Python.song_graph.executor&quot;: &quot;Run&quot;,
-    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
-    &quot;git-widget-placeholder&quot;: &quot;Denise&quot;,
-    &quot;settings.editor.selected.configurable&quot;: &quot;com.jetbrains.python.configuration.PyActiveSdkModuleConfigurable&quot;
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "ModuleVcsDetector.initialDetectionPerformed": "true",
+    "Python.downloaded_data.executor": "Run",
+    "Python.extract_subset.executor": "Run",
+    "Python.main.executor": "Run",
+    "Python.song_file_cleaning.executor": "Run",
+    "Python.song_graph.executor": "Run",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager": "true",
+    "RunOnceActivity.git.unshallow": "true",
+    "git-widget-placeholder": "Norah",
+    "settings.editor.selected.configurable": "com.jetbrains.python.configuration.PyActiveSdkModuleConfigurable"
   }
-}</component>
+}]]></component>
   <component name="RecentsManager">
     <key name="MoveFile.RECENT_KEYS">
       <recent name="$PROJECT_DIR$/data" />

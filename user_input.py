@@ -1,6 +1,6 @@
 import genre_tree
 
-song_file = 'song_file.csv'
+song_file = 'data/song_file.csv'
 genre_tree = genre_tree.create_genre_tree(song_file)
 
 # needs the exact spelling in genre_tree, not case-sensitive

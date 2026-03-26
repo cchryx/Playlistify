@@ -22,10 +22,40 @@ class Song:
     meaning they can be used as dictionary keys or in sets.
 
     Instance Attributes:
-        - TODO:
-    Representation Invariants:
-        - TODO:
+        - artist_name: string of name of the artist
+        - track_name: string of name of the song
+        - track_id: unique string of ID of the song
+        - popularity: value of popularity of the song (0 to 100)
+        - year: year released (2000 to 2023)
+        - genre: genre of the song
+        - dandeability: song's suitability for dancing (0.0 to 1.0)
+        - energy: the perceptual measure of intensity and activity (0.0 to 1.0)
+        - key: the key that the song is in (-1 to -11)
+        - loudness: overall loudness of track in decibels (-60 to 0 dB)
+        - mode: modality of the track (major '1' / minor '0')
+        - speechiness: presence of spojen words in the track
+        - acousticness: confidence measure from 0 to 1 of whether the track is acoustic
+        - instrumentalness: whether the song contains vocal (0.0 to 1.0)
+        - liveness: presence of audience in recording (0.0 to 1.0)
+        - valence: musicial positiveness (0.0 to 1.0)
+        - tempo: tempo of the track in beats per minute (BPM)
+        - duration_ms: duration of song in milliseconds
+        - time_signature: estimated time signature (3 to 7)
 
+    Representation Invariants:
+        - self.popularity >= 0 and self.popularity <= 100
+        - self.year >= 2000 and self.year <= 2023
+        - self.dandeability >= 0.0 and self.dandeability <= 1.0
+        - self.energy >= 0.0 and self.energy <= 1.0
+        - self.key >= -11 and self.key <= -1
+        - self.loudness >= -60 and self.loudness <= 0
+        - self.mode == 0 or self.mode == 1
+        - self.acousticness <= 1 and self.acousticness >= 0
+        - self.instrumentalness >= 0.0 and self.instrumentalness <= 1.0
+        - self.liveness >= 0.0 and self.liveness <= 1.0
+        - self.valence >= 0.0 and self.valence <= 1.0
+        - self.duration_ms > 0
+        - self.time_signature >= 3 and self.time_signature <= 7
     """
     artist_name: str
     track_name: str

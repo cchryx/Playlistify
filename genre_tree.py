@@ -158,7 +158,7 @@ class GenreTree:
     def is_empty(self) -> bool:
         """Return whether this Genre_Tree is empty.
 
-        A Genre_Tree is empty if and only if its genre label is None.
+        A GenreTree is empty if and only if its genre label is None.
         """
         return self._genre is None
 
@@ -174,7 +174,7 @@ class GenreTree:
         return self._subtrees
 
     def find(self, genre: str) -> Optional[GenreTree]:
-        """Return the Genre_Tree node matching the given genre label, or None if not found.
+        """Return the GenreTree node matching the given genre label, or None if not found.
 
         Search is performed recursively across all subtrees.
         """
@@ -235,12 +235,12 @@ def build_genre_tree() -> GenreTree:
 
 
 def create_genre_tree(data: str) -> GenreTree:
-    """Build a Genre_Tree from the CSV file at the given filepath.
+    """Build a GenreTree from the CSV file at the given filepath.
 
     Each song in the CSV is added to the node matching its genre label.
     Songs whose genre does not appear in the hierarchy are skipped.
 
-    The CSV is expected to have track_id at column index 0 and genre at column index 6.
+    The CSV is expected to have track_id at column index 2 and genre at column index 6.
     """
     tree = build_genre_tree()
 
@@ -248,7 +248,7 @@ def create_genre_tree(data: str) -> GenreTree:
         reader = csv.reader(file)
         next(reader)  # skip header row
         for row in reader:
-            track_id = row[0]
+            track_id = row[2]
             genre = row[6]
             tree.add_song(genre, track_id)
 

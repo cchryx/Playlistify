@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import csv
 import math
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 # TODO: check all docstrings in the file
 

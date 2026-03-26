@@ -194,12 +194,12 @@ def load_song_data(song_file: str) -> SongGraph:
 
     """
 
-    with open(song_file) as file:
+    with open(song_file, encoding='utf-8') as file:
         reader = csv.reader(file)
         next(reader)
         songs = list(reader)
 
-    song_graph = SongGraph()
+    song_graph = SongGraph(_vertices={})
 
     for song in songs:
         song_object = Song(song[0],

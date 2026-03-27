@@ -11,6 +11,7 @@ from __future__ import annotations
 import csv
 import math
 from dataclasses import dataclass, field
+from timeit import timeit
 
 # TODO: check all docstrings in the file
 
@@ -202,25 +203,25 @@ def load_song_data(song_file: str) -> SongGraph:
     song_graph = SongGraph(_vertices={})
 
     for song in songs:
-        song_object = Song(song[0],
-                           song[1],
+        song_object = Song(song[1],
                            song[2],
-                           int(song[3]),
+                           song[3],
                            int(song[4]),
-                           song[5],
-                           float(song[6]),
+                           int(song[5]),
+                           song[6],
                            float(song[7]),
-                           int(song[8]),
-                           float(song[9]),
-                           int(song[10]),
-                           float(song[11]),
+                           float(song[8]),
+                           int(song[9]),
+                           float(song[10]),
+                           int(song[11]),
                            float(song[12]),
                            float(song[13]),
                            float(song[14]),
                            float(song[15]),
                            float(song[16]),
-                           int(song[17]),
-                           int(song[18]))
+                           float(song[17]),
+                           int(song[18]),
+                           int(song[19]))
 
         song_graph.add_vertex(song_object)
 
@@ -241,8 +242,9 @@ def load_song_data(song_file: str) -> SongGraph:
 
 
 if __name__ == '__main__':
-    song_graph = load_song_data('data/spotify_data.csv')
-    print(len(song_graph.get_all_song_ids()))
+    # song_graph = load_song_data('data/spotify_data.csv')
+    print(timeit(lambda: load_song_data('data/spotify_data.csv'), number=1))
+    # print(len(song_graph.get_all_song_ids()))
 
 # from pathlib import Path
 # code for testing load_song_data

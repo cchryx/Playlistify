@@ -15,7 +15,7 @@ import song_graph
 if __name__ == '__main__':
     # Load data structures from CSV
     tree_genre = genre_tree.create_genre_tree('data/spotify_data.csv')
-    graph_song = song_graph.load_song_data('data/spotify_data.csv')
+    graph_song = song_graph.get_song_graph('data/spotify_data.csv')
 
     preferred_genres = []   # genres the user enjoys
     preferred_energy = 0.0  # minimum energy level (0.0 to 1.0)
@@ -90,6 +90,19 @@ if __name__ == '__main__':
             meets_popularity = (song.popularity >= viral_threshold) if preferred_viral else (song.popularity < viral_threshold)
 
             if meets_energy and meets_popularity:
-                candidate_songs.add(track_id)
+                candidate_songs.add((song.popularity, track_id))
 
-    print(f"\nFound {len(candidate_songs)} candidate songs.")
+    num_top_ranked = 5
+    seed_songs = sorted(list(candidate_songs))[:num_top_ranked]
+
+    song_graph_recommendation = set()
+    for song in seed_songs:
+        neighbours = graph_song.get_song_vertex(song[1]).neighbours
+        for neighbour in neighbours:
+            song_graph_recommendation.add((neighbours[neighbour], neighbour.item.track_name))
+
+    recommend_n_songs = 10
+    final_recommendation = sorted(list(song_graph_recommendation))[:recommend_n_songs]
+
+    print(final_recommendation)
+    # print(f"\nFound {len(candidate_songs)} candidate songs.")

@@ -13,6 +13,11 @@ import math
 from dataclasses import dataclass, field
 from timeit import timeit
 
+import numpy as np
+from sklearn.metrics.pairwise import cosine_similarity
+import joblib
+import os
+
 # TODO: check all docstrings in the file
 
 @dataclass
@@ -114,6 +119,12 @@ class SongGraph:
             return self._vertices[track_id].item
         return None
 
+    def get_song_vertex(self, track_id: str) -> _SongVertex | None:
+        """Return the Song object associated with the track_id, or None if not found."""
+        if track_id in self._vertices:
+            return self._vertices[track_id]
+        return None
+
     def get_all_songs(self) -> list[Song]:
         """Return a list of all Song objects in the graph."""
         return [v.item for v in self._vertices.values()]
@@ -121,6 +132,21 @@ class SongGraph:
     def get_all_song_ids(self) -> list[str]:
         """Return a list of all Song IDs in the graph."""
         return list(self._vertices.keys())
+
+    def get_feature_matrix(self) -> tuple[list[str], np.ndarray]:
+        """Return all track IDs and their audio feature vectors as a NumPy matrix.
+
+        Each row in the matrix corresponds to a song, with columns representing:
+        danceability, energy, valence, tempo, acousticness, instrumentalness,
+        loudness, and speechiness — matching the features used in get_cosine_similarity.
+        """
+        ids = list(self._vertices.keys())
+        matrix = np.array([
+            [v.item.danceability, v.item.energy, v.item.valence, v.item.tempo,
+             v.item.acousticness, v.item.instrumentalness, v.item.loudness, v.item.speechiness]
+            for v in self._vertices.values()
+        ])
+        return ids, matrix
 
     def get_cosine_similarity(self, track_id1: str, track_id2: str) -> float:
         """
@@ -226,19 +252,32 @@ def load_song_data(song_file: str) -> SongGraph:
         song_graph.add_vertex(song_object)
 
     # Minimum cosine similarity required to create an edge between two songs
-    similarity_threshold = 0.75
+    similarity_threshold = 0.9
 
-    # Compare every pair of songs and add an edge if similarity exceeds the threshold.
-    # This is O(n^2) — expected for a similarity graph over all songs.
-    all_ids = song_graph.get_all_song_ids()
+    # Compute all pairwise cosine similarities at once using NumPy.
+    # This is significantly faster than the pure Python O(n^2) loop.
+    all_ids, feature_matrix = song_graph.get_feature_matrix()
+    sim_matrix = cosine_similarity(feature_matrix)  # shape: (n_songs, n_songs)
+
     for i in range(len(all_ids)):
         for j in range(i + 1, len(all_ids)):  # j starts at i+1 to avoid duplicates and self-comparisons
-            id1, id2 = all_ids[i], all_ids[j]
-            similarity = song_graph.get_cosine_similarity(id1, id2)
+            similarity = round(sim_matrix[i][j], 3)
             if similarity >= similarity_threshold:
-                song_graph.add_edge(id1, id2, similarity)
+                song_graph.add_edge(all_ids[i], all_ids[j], similarity)
 
     return song_graph
+
+
+def get_song_graph(csv_path: str, cache_path: str = 'data/song_graph.pkl') -> SongGraph:
+    """Load SongGraph from cache if it exists, otherwise build it from CSV and cache it."""
+    if os.path.exists(cache_path):
+        print("Loading graph from cache...")
+        return joblib.load(cache_path)
+    else:
+        print("Building graph from CSV (this may take a while)...")
+        graph = load_song_data(csv_path)
+        joblib.dump(graph, cache_path)
+        return graph
 
 
 if __name__ == '__main__':

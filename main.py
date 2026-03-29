@@ -7,15 +7,35 @@ playlist for further recommendation.
 
 Copyright (c) 2026 Xing Xu Chen, Tianqi Pan, Norah Liu, Denise Ma
 """
+import time
 
 import genre_tree
 import song_graph
 
 if __name__ == '__main__':
+    # When you are ready to check your work with python_ta, uncomment the following lines.
+    # (Delete the "#" and space before each line.)
+    # IMPORTANT: keep this code indented inside the "if __name__ == '__main__'" block
+    import python_ta
+
+    python_ta.check_all(config={
+        'max-line-length': 120,
+        'extra-imports': ['time', 'genre_tree', 'song_graph'],
+        'allowed-io': ['load_song_graph'],
+        'disable': []
+    })
+
     print("Loading song graph...")
+
+    start_time = time.perf_counter()
+
     # Load data structures from CSV
     tree_genre = genre_tree.create_genre_tree('data/spotify_data.csv')
     graph_song = song_graph.load_song_graph('data/spotify_data.csv')
+
+    end_time = time.perf_counter()
+    duration = end_time - start_time
+    print(f"Loading completed in {duration:.2f} seconds.")
 
     preferred_genres = []  # genres the user enjoys
     preferred_energy = 0.0  # minimum energy level (0.0 to 1.0)
@@ -74,7 +94,7 @@ if __name__ == '__main__':
         except ValueError:
             print("Invalid input, please enter a whole number.")
 
-    print(f"\nPreferences collected:")
+    print("\nPreferences collected:")
     print(f"  Genres: {preferred_genres}")
     print(f"  Viral songs: {preferred_viral}")
     print(f"  Min energy: {preferred_energy}")
@@ -126,6 +146,6 @@ if __name__ == '__main__':
     final_recommendation = sorted(list(song_graph_recommendation), reverse=True)[:recommend_n_songs]
 
     # Print final recommendations in a numbered list with song name and genre.
-    print(f"\nYour playlist:")
+    print("\nYour playlist:")
     for i, song in enumerate(final_recommendation):
         print(f"{i + 1}. {song[1]} - {song[2]}")

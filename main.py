@@ -12,13 +12,15 @@ import genre_tree
 import song_graph
 
 if __name__ == '__main__':
+    print("Loading song graph...")
     # Load data structures from CSV
     tree_genre = genre_tree.create_genre_tree('data/spotify_data.csv')
-    graph_song = song_graph.load_song_data('data/spotify_data.csv')
+    graph_song = song_graph.load_song_graph('data/spotify_data.csv')
 
     preferred_genres = []  # genres the user enjoys
     preferred_energy = 0.0  # minimum energy level (0.0 to 1.0)
     preferred_viral = False  # True = popular songs, False = hidden gems
+    recommend_n_songs = 0  # number of songs in the playlist
 
     # --- Collect preferred genres (allow multiple) ---
     # needs the exact spelling in genre_tree, not case-sensitive
@@ -60,10 +62,23 @@ if __name__ == '__main__':
         except ValueError:
             print("Invalid input, please enter a number.")
 
+    # --- Collect number of songs in playlist ---
+    while True:
+        num_songs_input = input("How many songs would you like in your playlist? ")
+        try:
+            recommend_n_songs = int(num_songs_input)
+            if recommend_n_songs > 0:
+                break
+            else:
+                print("Please enter a number greater than 0.")
+        except ValueError:
+            print("Invalid input, please enter a whole number.")
+
     print(f"\nPreferences collected:")
     print(f"  Genres: {preferred_genres}")
     print(f"  Viral songs: {preferred_viral}")
     print(f"  Min energy: {preferred_energy}")
+    print(f"  Playlist size: {recommend_n_songs}")
 
     viral_threshold = 10  # popularity cutoff out of 100
 
@@ -73,25 +88,18 @@ if __name__ == '__main__':
     for genre in preferred_genres:
         genre_node = tree_genre.find(genre)
 
-        # Skip if the genre doesn't exist in the tree
         if genre_node is None:
             continue
 
-        for track_id in genre_node.songs:
-            song = graph_song.get_song(track_id)
-
-            # Skip if the song isn't found in the graph
-            if song is None:
+        for song in graph_song.get_all_songs():
+            if song.genre != genre:
                 continue
 
-            # Check energy filter (always applied)
-            meets_energy = song.energy >= preferred_energy
-
-            # Check popularity filter (only applied if user wants viral songs)
+            meets_energy = song.features.energy >= preferred_energy
             meets_popularity = (song.popularity >= viral_threshold) if preferred_viral else True
 
             if meets_energy and meets_popularity:
-                candidate_songs.add((song.popularity, track_id))
+                candidate_songs.add((song.popularity, song))
 
     print(f"Number of songs in user preference filtering stage: {len(candidate_songs)}")
 
@@ -99,7 +107,7 @@ if __name__ == '__main__':
     # These seed songs represent the best match to the user's preferences and will
     # be used to find similar songs via the graph's neighbour edges.
     num_top_ranked = 5
-    seed_songs = sorted(list(candidate_songs), reverse=True)[:num_top_ranked]
+    seed_songs = sorted(list(candidate_songs), key=lambda x: x[0], reverse=True)[:num_top_ranked]
 
     print(f"Number of songs in popularity filtering stage: {len(seed_songs)}")
 
@@ -109,17 +117,15 @@ if __name__ == '__main__':
     # Each recommended song is stored as (weight, track_name, genre) so the
     # final list can be sorted by similarity weight.
     song_graph_recommendation = set()
-    for song in seed_songs:
-        neighbours = graph_song.get_song_vertex(song[1]).neighbours
-        for neighbour_id, weight in neighbours.items():
-            neighbour_song = graph_song.get_song(neighbour_id)
-            if neighbour_song is not None:
-                song_graph_recommendation.add((weight, neighbour_song.track_name, neighbour_song.genre))
+    for _, song in seed_songs:
+        for neighbour_song in graph_song.get_neighbours(song):
+            weight = graph_song.get_weight(song, neighbour_song)
+            song_graph_recommendation.add((weight, neighbour_song.track_name, neighbour_song.genre))
 
     # Sort recommendations by similarity weight (highest first) and take the top N.
-    recommend_n_songs = 10
     final_recommendation = sorted(list(song_graph_recommendation), reverse=True)[:recommend_n_songs]
 
     # Print final recommendations in a numbered list with song name and genre.
+    print(f"\nYour playlist:")
     for i, song in enumerate(final_recommendation):
         print(f"{i + 1}. {song[1]} - {song[2]}")

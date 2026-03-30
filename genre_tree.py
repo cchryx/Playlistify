@@ -1,7 +1,7 @@
 """
 CSC111 Project: Playlistify (Mood-Aware Music Recommendation Engine)
 
-This module contains the Genre_Tree class to represent music genres in a tree structure,
+This module contains the GenreTree class to represent music genres in a tree structure,
 where each node corresponds to a genre and its associated songs, enabling hierarchical
 genre-based organization and traversal.
 
@@ -10,9 +10,9 @@ Copyright (c) 2026 Xing Xu Chen, Tianqi Pan, Norah Liu, Denise Ma
 
 from __future__ import annotations
 import csv
-from typing import Any, Optional
+from typing import Optional
 
-# Mapping of each genre to its parent category
+# Mapping of each genre to its parent category (Constant variable)
 GENRE_HIERARCHY = {
     # Electronic
     'electronic': 'root',
@@ -129,20 +129,21 @@ class GenreTree:
     more specific sub-genres.
 
     Instance Attributes:
-        - _genre: The genre label for this node, or None if this tree is empty.
+        - genre: The genre label for this node, or None if this tree is empty.
         - songs: The list of song track IDs associated with this genre.
-        - _subtrees: The list of subtrees representing sub-genres of this genre.
 
     Representation Invariants:
         - self.is_empty() == (self._genre is None)
         - all(not subtree.is_empty() for subtree in self._subtrees)
     """
-
-    _genre: str
+    genre: str
     songs: list[str]
+
+    # Private Instance Attributes:
+    #     - _subtrees: The list of subtrees representing sub-genres of this genre.
     _subtrees: list[GenreTree]
 
-    def __init__(self, genre: Optional[Any], subtrees: list[GenreTree]) -> None:
+    def __init__(self, genre: str, subtrees: list[GenreTree]) -> None:
         """Initialize a new Genre_Tree with the given genre label and subtrees.
 
         The songs list is initialized as empty. Use other methods to populate it.
@@ -150,16 +151,16 @@ class GenreTree:
         Preconditions:
             - genre is not None or subtrees == []
         """
-        self._genre = genre
-        self._subtrees = subtrees
+        self.genre = genre
         self.songs = []
+        self._subtrees = subtrees
 
     def is_empty(self) -> bool:
         """Return whether this Genre_Tree is empty.
 
         A GenreTree is empty if and only if its genre label is None.
         """
-        return self._genre is None
+        return self.genre is None
 
     def add_subtree(self, subtree: GenreTree) -> None:
         """Add the given subtree as a sub-genre of this Genre_Tree.
@@ -177,7 +178,7 @@ class GenreTree:
 
         Search is performed recursively across all subtrees.
         """
-        if self._genre == genre:
+        if self.genre == genre:
             return self
         for subtree in self._subtrees:
             result = subtree.find(genre)
@@ -191,12 +192,12 @@ class GenreTree:
 
         Return True if the genre was found and the song was added, False otherwise.
         """
-        if self._genre == genre:
+        if self.genre == genre:
             self.songs.append(track_id)
             return True
         for subtree in self._subtrees:
             if subtree.add_song(genre, track_id):
-                self.songs.append(track_id)  # propagate up to this ancestor
+                self.songs.append(track_id)
                 return True
         return False
 
@@ -206,7 +207,7 @@ class GenreTree:
         Each level of depth is represented by two additional spaces of indentation.
         """
         indent = '  ' * level
-        result = f"{indent}{self._genre} ({len(self.songs)} songs)\n"
+        result = f"{indent}{self.genre} ({len(self.songs)} songs)\n"
         for subtree in self._subtrees:
             result += subtree.__str__(level + 1)
         return result
@@ -233,7 +234,7 @@ def build_genre_tree() -> GenreTree:
     return root
 
 
-def create_genre_tree(data: str) -> GenreTree:
+def load_genre_tree(data: str) -> GenreTree:
     """Build a GenreTree from the CSV file at the given filepath.
 
     Each song in the CSV is added to the node matching its genre label.
@@ -245,10 +246,22 @@ def create_genre_tree(data: str) -> GenreTree:
 
     with open(data, encoding='utf-8') as file:
         reader = csv.reader(file)
-        next(reader)  # skip header row
+        next(reader)  # Skip header row
         for row in reader:
             track_id = row[3]
             genre = row[6]
             tree.add_song(genre, track_id)
 
     return tree
+
+
+if __name__ == "__main__":
+    # When you are ready to check your work with python_ta, uncomment the following lines.
+    # (Delete the "#" and space before each line.)
+    # IMPORTANT: keep this code indented inside the "if __name__ == '__main__'" block
+    import python_ta
+    python_ta.check_all(config={
+        'max-line-length': 120,
+        'extra-imports': ['csv'],
+        'allowed-io': ['load_genre_tree'],
+    })

@@ -1,8 +1,9 @@
 """
 CSC111 Project: Playlistify (Mood-Aware Music Recommendation Engine)
 
-This module contains the _Vertex and Song classes to represent music data in a graph,
-along with the Graph dataclass for managing connections between songs.
+This module defines the data classes and graph structure used to represent songs
+and their audio similarities. It includes AudioMood, AudioTechnical, Song, and
+SongGraph, as well as functions to load and build the graph from a CSV dataset.
 
 Copyright (c) 2026 Xing Xu Chen, Tianqi Pan, Norah Liu, Denise Ma
 """
@@ -127,12 +128,10 @@ class _SongVertex:
 
 @dataclass
 class SongGraph:
-    """A graph representing a music network where nodes are songs.
-
-    Instance Attributes:
-        - _vertices: A collection of the vertices contained in this graph.
-            Maps song track_id to the _Vertex object.
-    """
+    """A graph representing a music network where nodes are songs."""
+    # Private Instance Attributes:
+    #     - _vertices: A collection of the vertices contained in this graph.
+    #             Maps song track_id to the _Vertex object.
     _vertices: dict[Song, _SongVertex]
 
     def __init__(self) -> None:

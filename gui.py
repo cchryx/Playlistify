@@ -11,7 +11,7 @@ import math
 import tkinter as tk
 from tkinter import font as tkfont
 
-from genre_tree import GENRE_HIERARCHY, create_genre_tree
+from genre_tree import GENRE_HIERARCHY, load_genre_tree
 import song_graph as sg
 
 # ── Palette (white theme) ──────────────────────────────────────────────────────
@@ -685,7 +685,7 @@ class PlaylistifyApp(tk.Tk):
 
         # load data (cached after first run)
         if self._tree_genre is None:
-            self._tree_genre = create_genre_tree('data/spotify_data.csv')
+            self._tree_genre = load_genre_tree('data/spotify_data.csv')
         if self._graph_song is None:
             self._graph_song = sg.load_song_graph('data/spotify_data.csv')
 

@@ -1,7 +1,7 @@
 import pandas as pd
 
 # Load the CSV
-df = pd.read_csv('unfiltered_song_file.csv')
+df = pd.read_csv('../unfiltered_spotify_data.csv')
 
 # Drop the first column
 df = df.drop(columns=['Unnamed: 0'])

@@ -30,7 +30,7 @@ if __name__ == '__main__':
     start_time = time.perf_counter()
 
     # Load data structures from CSV
-    tree_genre = genre_tree.load_genre_tree('data/spotify_data.csv')
+    tree_genre = genre_tree.create_genre_tree('data/spotify_data.csv')
     graph_song = song_graph.load_song_graph('data/spotify_data.csv')
 
     end_time = time.perf_counter()

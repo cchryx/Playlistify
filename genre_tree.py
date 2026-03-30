@@ -12,6 +12,7 @@ from __future__ import annotations
 import csv
 from typing import Any, Optional
 
+
 # Mapping of each genre to its parent category
 GENRE_HIERARCHY = {
     # Electronic
@@ -247,7 +248,7 @@ def create_genre_tree(data: str) -> GenreTree:
         reader = csv.reader(file)
         next(reader)  # skip header row
         for row in reader:
-            track_id = row[3]
+            track_id = row[2]
             genre = row[6]
             tree.add_song(genre, track_id)
 

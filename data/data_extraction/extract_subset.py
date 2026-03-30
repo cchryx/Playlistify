@@ -25,7 +25,7 @@ def extract_random_subset(input_path, output_path, n_rows=8000, seed=42):
 
 extract_random_subset(
     input_path="/Users/norah/.cache/kagglehub/datasets/amitanshjoshi/spotify-1million-tracks/versions/1/spotify_data.csv",
-    output_path="unfiltered_song_file.csv",
+    output_path="../unfiltered_spotify_data.csv",
     n_rows=8000,
     seed=42
 )

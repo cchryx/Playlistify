@@ -1,3 +1,12 @@
+# CSC111 Winter 2026: Python libraries we'll be using this semester.
+
+# Testing and code checking
+hypothesis
+pytest
+python-ta
+
+# Graphics and data visualization
+plotly
+kagglehub
+pandas
 numpy
-scikit-learn
-joblib

@@ -40,6 +40,11 @@ VIRAL_THRESHOLD = 10
 
 # ── Build children map ────────────────────────────────────────────────────────
 def _build_children() -> dict[str, list[str]]:
+    """Build and return a mapping from each genre to its list of direct child genres.
+
+    Iterates over GENRE_HIERARCHY to invert the child->parent relationship into a
+    parent->[children] lookup. The special 'root' key collects all top-level genres.
+    """
     children: dict[str, list[str]] = {"root": []}
     for genre in GENRE_HIERARCHY:
         children[genre] = []
@@ -53,9 +58,38 @@ CHILDREN = _build_children()
 
 # ══════════════════════════════════════════════════════════════════════════════
 class PlaylistifyApp(tk.Tk):
-    """Root window — hosts all pages in a simple stack."""
+    """The root Tkinter window for the Playlistify application.
+
+    Manages a stack of pages (tk.Frame instances) that are shown and hidden
+    one at a time. Pages are indexed as follows:
+        0 — Genre selection (search bar + tag chips)
+        1 — Genre tree explorer (bubble canvas, accessible via Browse button only)
+        2 — Viral / popularity preference
+        3 — Energy level slider
+        4 — Playlist size input + Generate button
+        5 — Results (scrollable playlist)
+
+    Instance Attributes:
+        - preferred_genres: The list of genre strings selected by the user.
+        - preferred_viral: Whether the user wants popular songs (popularity >= VIRAL_THRESHOLD).
+        - preferred_energy: The minimum energy level the user wants, normalized to [0.0, 1.0].
+        - recommend_n_songs: The number of songs to include in the final playlist.
+        - pages: The ordered list of page frames registered in the window.
+        - current_page: The index of the currently visible page.
+
+    Representation Invariants:
+        - 0 <= self.current_page < len(self.pages)
+        - 0.0 <= self.preferred_energy <= 1.0
+        - self.recommend_n_songs >= 0
+    """
 
     def __init__(self) -> None:
+        """Initialize the Playlistify window, build all pages, and display page 0.
+
+        Sets up the fixed 720x820 window, initializes user preference state to
+        sensible defaults, builds all six pages and the bottom navigation bar,
+        and shows the genre selection page.
+        """
         super().__init__()
         self.title("Playlistify")
         self.geometry("720x820")
@@ -87,6 +121,11 @@ class PlaylistifyApp(tk.Tk):
 
     # ── Fonts ──────────────────────────────────────────────────────────────────
     def _build_fonts(self) -> None:
+        """Initialize and store all tkinter Font objects used across the application.
+
+        Fonts are assigned as instance attributes so every page builder method
+        can reference them without re-creating Font objects repeatedly.
+        """
         self.font_title   = tkfont.Font(family="Georgia",     size=20, weight="bold")
         self.font_label   = tkfont.Font(family="Georgia",     size=12)
         self.font_small   = tkfont.Font(family="Georgia",     size=9)
@@ -99,6 +138,12 @@ class PlaylistifyApp(tk.Tk):
 
     # ── Navigation ─────────────────────────────────────────────────────────────
     def _build_nav(self) -> None:
+        """Build and place the bottom navigation bar with back/forward arrows and progress dots.
+
+        The bar is fixed at the bottom of the window. Page 1 (genre tree explorer)
+        is excluded from arrow navigation and is only reachable via the Browse button
+        on page 0. The four dots track progress across pages 0, 2, 3, and 4/5.
+        """
         nav = tk.Frame(self, bg=SURFACE, height=64,
                        highlightbackground=BORDER, highlightthickness=1)
         nav.place(relx=0, rely=1.0, anchor="sw", relwidth=1.0, height=64)
@@ -126,14 +171,30 @@ class PlaylistifyApp(tk.Tk):
         self._update_dots()
 
     def _dot_index(self) -> int:
+        """Return the progress-dot index (0–3) corresponding to the current page.
+
+        Pages 0 and 1 both map to dot 0, since the tree explorer is a side-branch
+        of page 0. Page 5 (results) shares dot 3 with page 4 (generate).
+        """
         return {0: 0, 1: 0, 2: 1, 3: 2, 4: 3, 5: 3}.get(self.current_page, 0)
 
     def _update_dots(self) -> None:
+        """Highlight the progress dot that corresponds to the current page.
+
+        The active dot is colored with ACCENT; all others use BORDER_DARK.
+        """
         di = self._dot_index()
         for i, d in enumerate(self.dots):
             d.configure(fg=ACCENT if i == di else BORDER_DARK)
 
     def _show_page(self, index: int) -> None:
+        """Hide every page and display the page at the given index.
+
+        Also updates the progress dots to reflect the new current page.
+
+        Preconditions:
+            - 0 <= index < len(self.pages)
+        """
         for p in self.pages:
             p.place_forget()
         self.pages[index].place(x=0, y=0, width=720, height=756)
@@ -141,6 +202,11 @@ class PlaylistifyApp(tk.Tk):
         self._update_dots()
 
     def _prev_page(self) -> None:
+        """Navigate to the previous page, skipping page 1 (genre tree explorer).
+
+        Page 1 is only reachable via the Browse button on page 0, not by arrow
+        navigation. From page 2 the back arrow therefore returns to page 0 directly.
+        """
         # Page 1 (tree explorer) is only reachable via the Browse button, not arrow nav
         if self.current_page == 2:
             self._show_page(0)
@@ -148,6 +214,11 @@ class PlaylistifyApp(tk.Tk):
             self._show_page(self.current_page - 1)
 
     def _next_page(self) -> None:
+        """Navigate to the next page, skipping page 1 (genre tree explorer).
+
+        Page 1 is only reachable via the Browse button on page 0, not by arrow
+        navigation. From page 0 the next arrow therefore jumps to page 2 directly.
+        """
         # Skip page 1 (tree explorer) when using arrow nav
         if self.current_page == 0:
             self._show_page(2)
@@ -158,6 +229,13 @@ class PlaylistifyApp(tk.Tk):
     # PAGE 0 — Genre selection
     # ══════════════════════════════════════════════════════════════════════════
     def _build_page_genre(self) -> None:
+        """Build and register page 0 — the genre selection page.
+
+        Contains a search bar with live-filtered dropdown, a Browse button that
+        opens the genre tree explorer (page 1), and a tag-chip area showing all
+        currently selected genres. Users may add genres by typing and pressing
+        Enter or by clicking a dropdown suggestion, and remove them via the x chip.
+        """
         page = tk.Frame(self, bg=BG)
         self.pages.append(page)
 
@@ -224,16 +302,24 @@ class PlaylistifyApp(tk.Tk):
                  ).place(relx=0.5, y=510, anchor="center")
 
     def _clear_placeholder(self, _: tk.Event) -> None:  # type: ignore[type-arg]
+        """Clear the placeholder text when the search entry gains focus."""
         if self.search_entry.get() == "Search genres…":
             self.search_entry.delete(0, "end")
             self.search_entry.configure(fg=TEXT)
 
     def _restore_placeholder(self, _: tk.Event) -> None:  # type: ignore[type-arg]
+        """Restore the placeholder text when the search entry loses focus if empty."""
         if not self.search_entry.get():
             self.search_entry.insert(0, "Search genres…")
             self.search_entry.configure(fg=TEXT_DIM)
 
     def _on_genre_type(self, *_: object) -> None:
+        """Update the dropdown list each time the user types in the search entry.
+
+        Filters ALL_GENRES by substring match against the current query and shows
+        up to MAX_DROP results. Hides the dropdown if the query is empty or yields
+        no matches.
+        """
         query = self.genre_var.get().strip().lower()
         if not query or query == "search genres…":
             self._hide_dropdown()
@@ -250,30 +336,49 @@ class PlaylistifyApp(tk.Tk):
         self.drop_frame.lift()
 
     def _hide_dropdown(self) -> None:
+        """Hide the genre search dropdown by removing it from the layout."""
         self.drop_frame.place_forget()
 
     def _on_genre_enter(self, _: tk.Event) -> None:  # type: ignore[type-arg]
+        """Handle the Return key in the search entry.
+
+        If a dropdown item is highlighted it is used; otherwise the raw typed
+        text is attempted as a genre name.
+        """
         typed = self.genre_var.get().strip().lower()
         sel   = self.drop_lb.curselection()
         genre = self.drop_lb.get(sel[0]) if sel else typed
         self._try_add_genre(genre)
 
     def _on_drop_select(self, _: tk.Event) -> None:  # type: ignore[type-arg]
+        """Add the currently highlighted dropdown item to the selected genres."""
         sel = self.drop_lb.curselection()
         if sel:
             self._try_add_genre(self.drop_lb.get(sel[0]))
 
     def _drop_focus_first(self, _: tk.Event) -> None:  # type: ignore[type-arg]
+        """Move keyboard focus from the search entry into the dropdown listbox.
+
+        Called when the user presses the Down arrow key while the entry is focused,
+        allowing them to navigate suggestions without using the mouse.
+        """
         if self.drop_lb.size() > 0:
             self.drop_lb.focus_set()
             self.drop_lb.selection_set(0)
 
     def _drop_up(self, _: tk.Event) -> None:  # type: ignore[type-arg]
+        """Return keyboard focus to the search entry when Up is pressed on the first dropdown item."""
         sel = self.drop_lb.curselection()
         if sel and sel[0] == 0:
             self.search_entry.focus_set()
 
     def _try_add_genre(self, genre: str) -> None:
+        """Attempt to add genre to the selected genres list and refresh the tag display.
+
+        The genre is only added if it exists in GENRE_HIERARCHY and has not already
+        been selected. After attempting to add, the search entry is cleared and
+        the dropdown is hidden.
+        """
         if genre in GENRE_HIERARCHY and genre not in self.preferred_genres:
             self.preferred_genres.append(genre)
             self._render_tags()
@@ -283,6 +388,12 @@ class PlaylistifyApp(tk.Tk):
         self.search_entry.focus_set()
 
     def _render_tags(self) -> None:
+        """Re-draw the genre tag chips inside the tag frame on page 0.
+
+        Destroys all existing chip widgets and recreates them from preferred_genres,
+        wrapping to a new row when chips would overflow the available width.
+        Each chip shows the genre name and an x button that calls _remove_genre.
+        """
         for w in self.tag_frame.winfo_children():
             w.destroy()
         x, y = 0, 0
@@ -307,6 +418,7 @@ class PlaylistifyApp(tk.Tk):
             x += cw + 8
 
     def _remove_genre(self, genre: str) -> None:
+        """Remove genre from the selected genres list and refresh the tag display."""
         self.preferred_genres.remove(genre)
         self._render_tags()
 
@@ -314,6 +426,17 @@ class PlaylistifyApp(tk.Tk):
     # PAGE 1 — Genre tree explorer
     # ══════════════════════════════════════════════════════════════════════════
     def _build_page_tree(self) -> None:
+        """Build and register page 1 — the genre tree explorer.
+
+        Displays genre nodes as clickable bubbles on a canvas. Clicking a bubble
+        with sub-genres drills into that sub-genre level; clicking a leaf bubble
+        adds it directly to the selection. The green + badge on each bubble also
+        adds that genre without drilling down. Two navigation controls are provided:
+        'Back to Search' returns to page 0, and 'Up' moves one level up in the tree.
+
+        This page is intentionally excluded from arrow navigation and is only
+        reachable via the Browse button on page 0.
+        """
         page = tk.Frame(self, bg=BG)
         self.pages.append(page)
 
@@ -355,6 +478,14 @@ class PlaylistifyApp(tk.Tk):
         self._tree_render()
 
     def _tree_render(self) -> None:
+        """Redraw the genre tree canvas for the current node (_tree_current).
+
+        Clears the canvas and draws one bubble per child genre of the current node.
+        Bubble size and grid layout are computed dynamically from the number of
+        children. Genres that have further sub-genres are outlined in ACCENT to
+        indicate they are drillable. The breadcrumb label and Up button state are
+        also updated to reflect the current depth.
+        """
         self.tree_canvas.delete("all")
         children = CHILDREN.get(self._tree_current, [])
 
@@ -435,6 +566,12 @@ class PlaylistifyApp(tk.Tk):
             fg=ACCENT if self._tree_path else BORDER_DARK)
 
     def _tree_drill_down(self, genre: str) -> None:
+        """Navigate into genre's sub-genres, or add it directly if it is a leaf.
+
+        If genre has no children in CHILDREN, it is treated as a leaf and added
+        to the selected genres via _tree_add_genre. Otherwise the tree path is
+        extended and the canvas is redrawn for the new current node.
+        """
         if not CHILDREN.get(genre):
             self._tree_add_genre(genre)
             return
@@ -443,12 +580,24 @@ class PlaylistifyApp(tk.Tk):
         self._tree_render()
 
     def _tree_drill_up(self) -> None:
+        """Navigate one level up in the genre tree, returning to the parent node.
+
+        If already at the root level this method does nothing. The canvas is
+        redrawn for the new current node after popping the last entry from the path.
+        """
         if self._tree_path:
             self._tree_path.pop()
             self._tree_current = self._tree_path[-1] if self._tree_path else "root"
             self._tree_render()
 
     def _tree_add_genre(self, genre: str) -> None:
+        """Add genre to the selected genres list from the tree explorer page.
+
+        If genre is already selected or not in GENRE_HIERARCHY, it is not added
+        again. A brief confirmation message is shown on the canvas for 1.8 seconds
+        and the tag chips on page 0 are refreshed so the new selection is visible
+        when the user returns.
+        """
         if genre in GENRE_HIERARCHY and genre not in self.preferred_genres:
             self.preferred_genres.append(genre)
             self._render_tags()
@@ -461,6 +610,12 @@ class PlaylistifyApp(tk.Tk):
     # PAGE 2 — Viral preference
     # ══════════════════════════════════════════════════════════════════════════
     def _build_page_viral(self) -> None:
+        """Build and register page 2 — the viral / popularity preference page.
+
+        Presents two pill buttons: 'Yes — give me hits' and 'No — surprise me'.
+        The selected button is highlighted in ACCENT. The default selection is
+        False (no popularity filter), matching main.py's default.
+        """
         page = tk.Frame(self, bg=BG)
         self.pages.append(page)
 
@@ -488,12 +643,24 @@ class PlaylistifyApp(tk.Tk):
         self._set_viral(False)
 
     def _pill_btn(self, parent: tk.Frame, text: str, cmd: object) -> tk.Button:
+        """Create and return a styled pill-shaped button with flat relief.
+
+        Used on the viral preference page to create the Yes/No toggle buttons.
+        The returned button is not yet packed or placed; the caller is responsible
+        for layout.
+        """
         return tk.Button(parent, text=text, font=self.font_label,
                          relief="flat", bd=0, cursor="hand2",
                          activebackground=ACCENT, activeforeground=BG,
                          padx=20, pady=10, command=cmd)  # type: ignore[arg-type]
 
     def _set_viral(self, value: bool) -> None:
+        """Set the viral preference and update the pill button visuals to match.
+
+        The active button is filled with ACCENT; the inactive button uses SURFACE
+        with a BORDER_DARK outline. Also updates self.preferred_viral so the value
+        is available when _generate runs.
+        """
         self.preferred_viral = value
         active   = {"bg": ACCENT,   "fg": BG,
                     "highlightbackground": ACCENT,      "highlightthickness": 0}
@@ -506,6 +673,13 @@ class PlaylistifyApp(tk.Tk):
     # PAGE 3 — Energy level
     # ══════════════════════════════════════════════════════════════════════════
     def _build_page_energy(self) -> None:
+        """Build and register page 3 — the energy level page.
+
+        Presents a horizontal slider from 1 to 10, with a large numeric readout
+        that updates live as the slider moves. The chosen value is divided by 10
+        to produce a normalized float in [0.1, 1.0] stored in preferred_energy,
+        matching the normalization applied in main.py.
+        """
         page = tk.Frame(self, bg=BG)
         self.pages.append(page)
 
@@ -536,6 +710,12 @@ class PlaylistifyApp(tk.Tk):
                  ).place(relx=0.5, y=336, anchor="center")
 
     def _on_energy_change(self, val: str) -> None:
+        """Update preferred_energy and the numeric readout when the slider moves.
+
+        val is the string representation of the slider's integer position (1–10).
+        It is normalized to [0.1, 1.0] by dividing by 10, matching main.py's
+        energy_value / 10 conversion.
+        """
         self.preferred_energy = int(val) / 10
         self.energy_label.configure(text=val)
 
@@ -543,6 +723,13 @@ class PlaylistifyApp(tk.Tk):
     # PAGE 4 — Playlist size + Generate button
     # ══════════════════════════════════════════════════════════════════════════
     def _build_page_count(self) -> None:
+        """Build and register page 4 — the playlist size and generation page.
+
+        Contains a large numeric entry for the desired playlist length (default 10)
+        and the 'Generate Playlist' button that triggers the full recommendation
+        pipeline. A status label below the button shows loading feedback and any
+        validation errors.
+        """
         page = tk.Frame(self, bg=BG)
         self.pages.append(page)
 
@@ -579,6 +766,13 @@ class PlaylistifyApp(tk.Tk):
     # PAGE 5 — Results
     # ══════════════════════════════════════════════════════════════════════════
     def _build_page_results(self) -> None:
+        """Build and register page 5 — the scrollable playlist results page.
+
+        Creates a canvas-based scrollable area inside a container frame. Song rows
+        are injected into this area by _populate_results after generation completes.
+        The subtitle label above the divider is also updated at that point to show
+        the song count and selected genres.
+        """
         page = tk.Frame(self, bg=BG)
         self.pages.append(page)
 
@@ -613,6 +807,16 @@ class PlaylistifyApp(tk.Tk):
                                      scrollregion=self.results_canvas.bbox("all")))
 
     def _populate_results(self, songs: list[tuple[float, str, str]]) -> None:
+        """Populate the results page with the given list of recommended songs.
+
+        Clears any previously rendered rows, then creates one row per song showing
+        a zero-padded index, the track name, genre, and a percentage match badge
+        derived from the cosine similarity weight. If songs is empty, a fallback
+        message prompts the user to broaden their preferences.
+
+        Preconditions:
+            - Each tuple in songs is (weight, track_name, genre) with 0.0 <= weight <= 1.0.
+        """
         for w in self.results_inner.winfo_children():
             w.destroy()
 
@@ -660,6 +864,22 @@ class PlaylistifyApp(tk.Tk):
     # Generation pipeline
     # ══════════════════════════════════════════════════════════════════════════
     def _generate(self) -> None:
+        """Run the full playlist recommendation pipeline and navigate to the results page.
+
+        Mirrors the logic in main.py exactly:
+            1. Validate the playlist size input (must be a positive integer).
+            2. Ensure at least one genre has been selected.
+            3. Load the genre tree and song graph from CSV on first run (cached thereafter).
+            4. Filter all songs to those whose genre exactly matches a selected genre,
+               whose energy meets or exceeds preferred_energy, and (if preferred_viral
+               is True) whose popularity is at least VIRAL_THRESHOLD.
+            5. Sort the filtered candidates by popularity (descending) and take the top 5
+               as seed songs.
+            6. Collect all graph neighbours of each seed song along with their edge weights
+               (cosine similarity scores).
+            7. Sort the neighbour set by similarity weight (descending) and take the top N.
+            8. Pass the final list to _populate_results and navigate to page 5.
+        """
         # validate count
         try:
             n = int(self.count_var.get())

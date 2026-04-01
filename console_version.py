@@ -10,6 +10,7 @@ Copyright (c) 2026 Xing Xu Chen, Tianqi Pan, Norah Liu, Denise Ma
 import time
 
 import genre_tree
+import graph_display
 import song_graph
 
 if __name__ == '__main__':
@@ -20,9 +21,10 @@ if __name__ == '__main__':
 
     python_ta.check_all(config={
         'max-line-length': 120,
-        'extra-imports': ['time', 'genre_tree', 'song_graph'],
+        'extra-imports': ['time', 'genre_tree', 'song_graph', 'graph_display'],
         'allowed-io': ['load_song_graph'],
         'disable': []
+
     })
 
     print("Loading song graph...")
@@ -129,8 +131,6 @@ if __name__ == '__main__':
     num_top_ranked = 5
     seed_songs = sorted(list(candidate_songs), key=lambda x: x[0], reverse=True)[:num_top_ranked]
 
-    print(f"Number of songs in popularity filtering stage: {len(seed_songs)}")
-
     # For each seed song, look up its neighbours in the song graph.
     # Neighbours are songs connected by an edge, meaning they are acoustically
     # similar based on the cosine angle of their audio features.
@@ -149,3 +149,16 @@ if __name__ == '__main__':
     print("\nYour playlist:")
     for i, song in enumerate(final_recommendation):
         print(f"{i + 1}. {song[1]} - {song[2]}")
+
+    # GRAPH DISPLAY
+
+    seed_song_objects = [s for _, s in seed_songs]
+
+    song_lookup = {s.track_name: s for s in graph_song.get_all_songs()}
+
+    final_song_objects = set()
+    for w, track_name, genre in final_recommendation:
+        if track_name in song_lookup:
+            final_song_objects.add(song_lookup[track_name])
+
+    graph_display.run_visualization(seed_song_objects, graph_song, final_song_objects)

@@ -253,3 +253,24 @@ def create_genre_tree(data: str) -> GenreTree:
             tree.add_song(genre, track_id)
 
     return tree
+
+
+def load_genre_tree(data: str) -> GenreTree:
+    """Build a GenreTree from the CSV file at the given filepath.
+
+    Each song in the CSV is added to the node matching its genre label.
+    Songs whose genre does not appear in the hierarchy are skipped.
+
+    The CSV is expected to have track_id at column index 2 and genre at column index 6.
+    """
+    tree = build_genre_tree()
+
+    with open(data, encoding='utf-8') as file:
+        reader = csv.reader(file)
+        next(reader)  # Skip header row
+        for row in reader:
+            track_id = row[3]
+            genre = row[6]
+            tree.add_song(genre, track_id)
+
+    return tree

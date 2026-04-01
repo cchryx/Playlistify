@@ -355,5 +355,4 @@ if __name__ == "__main__":
         'max-line-length': 120,
         'extra-imports': ['numpy', 'math', 'csv'],
         'allowed-io': ['load_song_graph'],
-        'disable': []
     })

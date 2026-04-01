@@ -337,7 +337,7 @@ class PlaylistifyApp(tk.Tk):
         self.search_entry.insert(0, "Search genres…")
         self.search_entry.bind("<Return>", self._on_genre_enter)
         self.search_entry.bind("<Down>", self._drop_focus_first)
-        self.search_entry.bind("<Escape>", lambda e: self._hide_dropdown())
+        self.search_entry.bind("<Escape>", lambda _: self._hide_dropdown())
         self.search_entry.bind("<FocusIn>", self._clear_placeholder)
         self.search_entry.bind("<FocusOut>", self._restore_placeholder)
 
@@ -351,7 +351,7 @@ class PlaylistifyApp(tk.Tk):
         self.drop_lb.pack(fill="both", expand=True, padx=1, pady=1)
         self.drop_lb.bind("<Return>", self._on_drop_select)
         self.drop_lb.bind("<Double-Button-1>", self._on_drop_select)
-        self.drop_lb.bind("<Escape>", lambda e: self._hide_dropdown())
+        self.drop_lb.bind("<Escape>", lambda _: self._hide_dropdown())
         self.drop_lb.bind("<Up>", self._drop_up)
 
         # browse button
@@ -620,21 +620,21 @@ class PlaylistifyApp(tk.Tk):
                 for item in (oid, tid):
                     self.tree_canvas.tag_bind(
                         item, "<Button-1>",
-                        lambda e, g=genre: self._tree_drill_down(g))
+                        lambda _, g=genre: self._tree_drill_down(g))
                     self.tree_canvas.tag_bind(
                         item, "<Enter>",
-                        lambda e, o=oid: self.tree_canvas.itemconfigure(
+                        lambda _, o=oid: self.tree_canvas.itemconfigure(
                             o, outline=ACCENT, width=2))
                     self.tree_canvas.tag_bind(
                         item, "<Leave>",
-                        lambda e, o=oid, ol=outline, lw2=lw:
+                        lambda _, o=oid, ol=outline, lw2=lw:
                         self.tree_canvas.itemconfigure(o, outline=ol, width=lw2))
 
                 # add on badge/plus
                 for item in (bid, pid):
                     self.tree_canvas.tag_bind(
                         item, "<Button-1>",
-                        lambda e, g=genre: self._tree_add_genre(g))
+                        lambda _, g=genre: self._tree_add_genre(g))
 
         # update breadcrumb & back button
         crumb = " › ".join(["root"] + self._tree_path) if self._tree_path else "root"
@@ -647,7 +647,7 @@ class PlaylistifyApp(tk.Tk):
         """Navigate into genre's sub-genres, or add it directly if it is a leaf.
 
         If genre has no children in CHILDREN, it is treated as a leaf and added
-        to the selected genres via _tree_add_genre. Otherwise the tree path is
+        to the selected genres via _tree_add_genre. Otherwise, the tree path is
         extended and the canvas is redrawn for the new current node.
         """
         if not CHILDREN.get(genre):
@@ -682,7 +682,7 @@ class PlaylistifyApp(tk.Tk):
         msg = self.tree_canvas.create_text(
             360, 590, text=f"✓  '{genre}' added to your selection",
             font=self.font_small, fill=ACCENT)
-        self.tree_canvas.after(1800, lambda: self.tree_canvas.delete(msg))
+        self.tree_canvas.after(1800, self.tree_canvas.delete, msg)
 
     # ══════════════════════════════════════════════════════════════════════════
     # PAGE 2 — Viral preference
@@ -890,7 +890,7 @@ class PlaylistifyApp(tk.Tk):
         self.results_canvas.create_window((0, 0), window=self.results_inner,
                                           anchor="nw")
         self.results_inner.bind("<Configure>",
-                                lambda e: self.results_canvas.configure(
+                                lambda _: self.results_canvas.configure(
                                     scrollregion=self.results_canvas.bbox("all")))
 
     def _populate_results(self, songs: list[tuple[float, str, str]]) -> None:

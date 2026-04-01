@@ -13,6 +13,7 @@ from tkinter import font as tkfont
 from typing import Optional
 
 from genre_tree import GENRE_HIERARCHY, GenreTree, load_genre_tree
+import graph_visualization
 import song_graph as sg
 
 # ── Palette (white theme) ──────────────────────────────────────────────────────
@@ -94,6 +95,8 @@ class PlaylistifyApp(tk.Tk):
     # Data structures (None until first Generate run)
     _tree_genre: Optional[GenreTree]
     _graph_song: Optional[sg.SongGraph]
+    _seed_songs: list[tuple[int, sg.Song]]
+    _final_songs: list[tuple[float, str, str]]
 
     # Genre tree explorer state
     _tree_path: list[str]
@@ -148,6 +151,7 @@ class PlaylistifyApp(tk.Tk):
     results_subtitle: tk.Label
     results_canvas: tk.Canvas
     results_inner: tk.Frame
+    viz_btn: tk.Button
 
     def __init__(self) -> None:
         """Initialize the Playlistify window, build all pages, and display page 0.
@@ -169,6 +173,8 @@ class PlaylistifyApp(tk.Tk):
 
         self._tree_genre = None
         self._graph_song = None
+        self._seed_songs = []
+        self._final_songs = []
 
         self._tree_path = []
         self._tree_current = "root"
@@ -857,9 +863,18 @@ class PlaylistifyApp(tk.Tk):
         tk.Frame(page, bg=BORDER, height=1).place(
             relx=0.5, y=88, anchor="center", width=620)
 
-        # scrollable list
+        # Visualize graph button
+        self.viz_btn = tk.Button(page, text="🔍  Visualize Recommendation Graph",
+                                 font=self.font_small, bg=SURFACE, fg=ACCENT,
+                                 relief="flat", bd=0, cursor="hand2",
+                                 activebackground=BORDER, activeforeground=ACCENT_DIM,
+                                 padx=12, pady=6,
+                                 command=self._launch_visualization)
+        self.viz_btn.place(relx=0.5, y=108, anchor="center")
+
+        # scrollable list — starts lower to leave room for the viz button
         container = tk.Frame(page, bg=BG)
-        container.place(x=50, y=100, width=620, height=590)
+        container.place(x=50, y=128, width=620, height=562)
 
         sb = tk.Scrollbar(container, orient="vertical")
         sb.pack(side="right", fill="y")
@@ -934,6 +949,31 @@ class PlaylistifyApp(tk.Tk):
     # ══════════════════════════════════════════════════════════════════════════
     # Generation pipeline
     # ══════════════════════════════════════════════════════════════════════════
+    def _launch_visualization(self) -> None:
+        """Launch the 3D interactive graph visualization in the user's browser.
+
+        Maps the final recommended song names back to Song objects using the
+        loaded song graph, then delegates to graph_visualization.run_visualization
+        with the seed songs, full graph, and final recommendation set.
+
+        This mirrors the _launch_viz function in console_version.py exactly.
+        The visualization opens as a Plotly figure in the default web browser
+        and supports zoom and 360-degree rotation.
+
+        Does nothing if the graph has not been loaded yet (i.e. _generate has
+        not been run successfully at least once).
+        """
+        if self._graph_song is None:
+            return
+
+        seed_objs = [s for _, s in self._seed_songs]
+        song_map = {s.track_name: s for s in self._graph_song.get_all_songs()}
+        final_objs = {song_map[name]
+                      for _, name, _ in self._final_songs
+                      if name in song_map}
+
+        graph_visualization.run_visualization(seed_objs, self._graph_song, final_objs)
+
     def _generate(self) -> None:
         """Run the full playlist recommendation pipeline and navigate to the results page.
 
@@ -945,10 +985,11 @@ class PlaylistifyApp(tk.Tk):
                whose energy meets or exceeds preferred_energy, and (if preferred_viral
                is True) whose popularity is at least VIRAL_THRESHOLD.
             5. Sort the filtered candidates by popularity (descending) and take the top 5
-               as seed songs.
+               as seed songs. Store them in _seed_songs for use by _launch_visualization.
             6. Collect all graph neighbours of each seed song along with their edge weights
                (cosine similarity scores).
             7. Sort the neighbour set by similarity weight (descending) and take the top N.
+               Store the result in _final_songs for use by _launch_visualization.
             8. Pass the final list to _populate_results and navigate to page 5.
         """
         # validate count
@@ -1001,6 +1042,7 @@ class PlaylistifyApp(tk.Tk):
         # seed songs (top 5 by popularity)
         seed_songs = sorted(list(candidate_songs),
                             key=lambda x: x[0], reverse=True)[:5]
+        self._seed_songs = seed_songs
 
         # collect neighbours from graph
         recommendation_set: set[tuple[float, str, str]] = set()
@@ -1013,6 +1055,7 @@ class PlaylistifyApp(tk.Tk):
         # sort by similarity, take top N
         final = sorted(list(recommendation_set),
                        reverse=True)[:self.recommend_n_songs]
+        self._final_songs = final
 
         self._populate_results(final)
         self.gen_btn.configure(state="normal", text="Generate Playlist  →")
@@ -1031,7 +1074,7 @@ if __name__ == "__main__":
 
     python_ta.check_all(config={
         'max-line-length': 120,
-        'extra-imports': ['math', 'tkinter', 'song_graph', 'genre_tree'],
+        'extra-imports': ['math', 'tkinter', 'song_graph', 'genre_tree', 'graph_visualization'],
         'allowed-io': ['load_song_graph'],
         # 'disable': ['C9103', 'E9972', 'R0902']
     })

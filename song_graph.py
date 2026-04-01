@@ -314,8 +314,20 @@ def _load_edges(song_graph: SongGraph, similarity_threshold: float) -> None:
     all_songs = song_graph.get_all_songs()
     feature_matrix = song_graph.get_feature_matrix()
 
+    # Compute the L2 norm of each song's feature vector (one scalar per row).
+    # keepdims=True preserves the (n_songs, 1) shape so broadcasting works correctly
+    # when dividing the matrix in the next step.
     norms = numpy.linalg.norm(feature_matrix, axis=1, keepdims=True)
+
+    # Divide each row by its norm to produce unit vectors. After this step every
+    # song's feature vector has length 1, so the dot product between any two rows
+    # equals their cosine similarity directly.
     normalized = feature_matrix / norms
+
+    # Multiply the normalized matrix by its own transpose to compute all pairwise
+    # cosine similarities at once. The result is a symmetric (n_songs, n_songs)
+    # matrix where entry [i][j] is the cosine similarity between song i and song j.
+    # This is significantly faster than computing each pair individually in a loop.
     sim_matrix = normalized @ normalized.T  # Shape: (n_songs, n_songs)
 
     for i in range(len(all_songs)):
@@ -325,7 +337,7 @@ def _load_edges(song_graph: SongGraph, similarity_threshold: float) -> None:
                 song_graph.add_edge(all_songs[i], all_songs[j], similarity)
 
 
-def load_song_graph(song_file: str, similarity_threshold: float = 0.98) -> SongGraph:
+def load_song_graph(song_file: str, similarity_threshold: float = 0.99) -> SongGraph:
     """Return a SongGraph loaded from song_file, with edges between songs whose
     cosine similarity is at or above similarity_threshold.
 
@@ -355,4 +367,5 @@ if __name__ == "__main__":
         'max-line-length': 120,
         'extra-imports': ['numpy', 'math', 'csv'],
         'allowed-io': ['load_song_graph'],
+        'disable': []
     })

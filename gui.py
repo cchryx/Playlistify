@@ -104,6 +104,9 @@ class PlaylistifyApp(tk.Tk):
         self._tree_genre = None
         self._graph_song = None
 
+        self._tree_path: list[str] = []
+        self._tree_current: str = "root"
+
         self._build_fonts()
 
         self.pages: list[tk.Frame] = []
@@ -471,9 +474,6 @@ class PlaylistifyApp(tk.Tk):
         self.tree_canvas = tk.Canvas(page, bg=BG, highlightthickness=0,
                                      width=720, height=616)
         self.tree_canvas.place(x=0, y=106)
-
-        self._tree_path: list[str] = []
-        self._tree_current: str = "root"
 
         self._tree_render()
 
@@ -950,5 +950,14 @@ class PlaylistifyApp(tk.Tk):
 
 
 if __name__ == "__main__":
+    import python_ta
+
+    python_ta.check_all(config={
+        'max-line-length': 120,
+        'extra-imports': ['math', 'tkinter', 'song_graph', 'genre_tree'],
+        'allowed-io': ['load_song_graph'],
+        'disable': ['C9103', 'E9972', 'R0902']
+    })
+
     app = PlaylistifyApp()
     app.mainloop()

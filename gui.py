@@ -16,9 +16,6 @@ from typing import Any
 from genre_tree import GENRE_HIERARCHY, GenreTree, load_genre_tree
 from song_graph import Song, SongGraph, load_song_graph
 
-# ── Constants ──────────────────────────────────────────────────────────────────
-
-
 # ── Palette (white theme) ──────────────────────────────────────────────────────
 BG = "#FFFFFF"
 SURFACE = "#F5F5F5"
@@ -773,7 +770,7 @@ class PlaylistifyApp(tkinter.Tk):
 
     # PAGE 2 Functions
     # --------------------------------------------------------------------------
-    def _pill_btn(self, parent: tkinter.Frame, text: str, cmd: object) -> tkinter.Button:
+    def _pill_btn(self, parent: tkinter.Frame, text: str, cmd: Any) -> tkinter.Button:
         """Create and return a styled pill-shaped button with flat relief.
 
         Used on the viral preference page to create the Yes/No toggle buttons.
@@ -783,7 +780,7 @@ class PlaylistifyApp(tkinter.Tk):
         return tkinter.Button(parent, text=text, font=self.font_label,
                               relief="flat", bd=0, cursor="hand2",
                               activebackground=ACCENT, activeforeground=BG,
-                              padx=20, pady=10, command=cmd)  # type: ignore[arg-type]
+                              padx=20, pady=10, command=cmd)
 
     def _set_viral(self, value: bool) -> None:
         """Set the viral preference and update the pill button visuals to match.
@@ -797,8 +794,8 @@ class PlaylistifyApp(tkinter.Tk):
                   "highlightbackground": ACCENT, "highlightthickness": 0}
         inactive = {"bg": SURFACE, "fg": TEXT_DIM,
                     "highlightbackground": BORDER_DARK, "highlightthickness": 1}
-        self._viral_yes.configure(**(active if value else inactive))  # type: ignore[arg-type]
-        self._viral_no.configure(**(inactive if value else active))  # type: ignore[arg-type]
+        self._viral_yes.configure(**(active if value else inactive))
+        self._viral_no.configure(**(inactive if value else active))
 
     # ══════════════════════════════════════════════════════════════════════════
     # PAGE 3 — Energy level

@@ -15,17 +15,17 @@ from genre_tree import GENRE_HIERARCHY, load_genre_tree
 import song_graph as sg
 
 # ── Palette (white theme) ──────────────────────────────────────────────────────
-BG          = "#FFFFFF"
-SURFACE     = "#F5F5F5"
-BORDER      = "#E0E0E0"
+BG = "#FFFFFF"
+SURFACE = "#F5F5F5"
+BORDER = "#E0E0E0"
 BORDER_DARK = "#BDBDBD"
-ACCENT      = "#1DB954"
-ACCENT_DIM  = "#158a3e"
-TEXT        = "#212121"
-TEXT_DIM    = "#757575"
-TAG_BG      = "#E8F5E9"
-TAG_BORDER  = "#1DB954"
-DROP_BG     = "#FFFFFF"
+ACCENT = "#1DB954"
+ACCENT_DIM = "#158a3e"
+TEXT = "#212121"
+TEXT_DIM = "#757575"
+TAG_BG = "#E8F5E9"
+TAG_BORDER = "#1DB954"
+DROP_BG = "#FFFFFF"
 
 BUBBLE_COLORS = {
     0: ("#1DB954", "#FFFFFF"),
@@ -33,8 +33,8 @@ BUBBLE_COLORS = {
     2: ("#F1F8E9", "#33691E"),
 }
 
-ALL_GENRES      = sorted(GENRE_HIERARCHY.keys())
-MAX_DROP        = 6
+ALL_GENRES = sorted(GENRE_HIERARCHY.keys())
+MAX_DROP = 6
 VIRAL_THRESHOLD = 10
 
 
@@ -96,24 +96,24 @@ class PlaylistifyApp(tk.Tk):
         self.resizable(False, False)
         self.configure(bg=BG)
 
-        self.preferred_genres:  list[str] = []
-        self.preferred_viral:   bool      = False
-        self.preferred_energy:  float     = 0.5
-        self.recommend_n_songs: int       = 10
+        self.preferred_genres: list[str] = []
+        self.preferred_viral: bool = False
+        self.preferred_energy: float = 0.5
+        self.recommend_n_songs: int = 10
 
         self._tree_genre = None
         self._graph_song = None
 
         self._build_fonts()
 
-        self.pages:        list[tk.Frame] = []
-        self.current_page: int            = 0
+        self.pages: list[tk.Frame] = []
+        self.current_page: int = 0
 
-        self._build_page_genre()    # 0
-        self._build_page_tree()     # 1
-        self._build_page_viral()    # 2
-        self._build_page_energy()   # 3
-        self._build_page_count()    # 4
+        self._build_page_genre()  # 0
+        self._build_page_tree()  # 1
+        self._build_page_viral()  # 2
+        self._build_page_energy()  # 3
+        self._build_page_count()  # 4
         self._build_page_results()  # 5
         self._build_nav()
 
@@ -126,15 +126,15 @@ class PlaylistifyApp(tk.Tk):
         Fonts are assigned as instance attributes so every page builder method
         can reference them without re-creating Font objects repeatedly.
         """
-        self.font_title   = tkfont.Font(family="Georgia",     size=20, weight="bold")
-        self.font_label   = tkfont.Font(family="Georgia",     size=12)
-        self.font_small   = tkfont.Font(family="Georgia",     size=9)
-        self.font_input   = tkfont.Font(family="Courier New", size=12)
-        self.font_nav     = tkfont.Font(family="Georgia",     size=16, weight="bold")
-        self.font_tag     = tkfont.Font(family="Courier New", size=10)
-        self.font_bubble  = tkfont.Font(family="Georgia",     size=9,  weight="bold")
-        self.font_result  = tkfont.Font(family="Georgia",     size=11)
-        self.font_big_num = tkfont.Font(family="Georgia",     size=36, weight="bold")
+        self.font_title = tkfont.Font(family="Georgia", size=20, weight="bold")
+        self.font_label = tkfont.Font(family="Georgia", size=12)
+        self.font_small = tkfont.Font(family="Georgia", size=9)
+        self.font_input = tkfont.Font(family="Courier New", size=12)
+        self.font_nav = tkfont.Font(family="Georgia", size=16, weight="bold")
+        self.font_tag = tkfont.Font(family="Courier New", size=10)
+        self.font_bubble = tkfont.Font(family="Georgia", size=9, weight="bold")
+        self.font_result = tkfont.Font(family="Georgia", size=11)
+        self.font_big_num = tkfont.Font(family="Georgia", size=36, weight="bold")
 
     # ── Navigation ─────────────────────────────────────────────────────────────
     def _build_nav(self) -> None:
@@ -259,24 +259,24 @@ class PlaylistifyApp(tk.Tk):
                                      insertbackground=ACCENT, relief="flat", bd=8)
         self.search_entry.pack(fill="both", expand=True)
         self.search_entry.insert(0, "Search genres…")
-        self.search_entry.bind("<Return>",  self._on_genre_enter)
-        self.search_entry.bind("<Down>",    self._drop_focus_first)
-        self.search_entry.bind("<Escape>",  lambda e: self._hide_dropdown())
-        self.search_entry.bind("<FocusIn>",  self._clear_placeholder)
+        self.search_entry.bind("<Return>", self._on_genre_enter)
+        self.search_entry.bind("<Down>", self._drop_focus_first)
+        self.search_entry.bind("<Escape>", lambda e: self._hide_dropdown())
+        self.search_entry.bind("<FocusIn>", self._clear_placeholder)
         self.search_entry.bind("<FocusOut>", self._restore_placeholder)
 
         # dropdown
         self.drop_frame = tk.Frame(page, bg=BORDER_DARK, padx=1, pady=1)
         self.drop_lb = tk.Listbox(self.drop_frame, font=self.font_input,
-                                   bg=DROP_BG, fg=TEXT,
-                                   selectbackground=ACCENT, selectforeground=BG,
-                                   relief="flat", bd=0, activestyle="none",
-                                   highlightthickness=0, exportselection=False)
+                                  bg=DROP_BG, fg=TEXT,
+                                  selectbackground=ACCENT, selectforeground=BG,
+                                  relief="flat", bd=0, activestyle="none",
+                                  highlightthickness=0, exportselection=False)
         self.drop_lb.pack(fill="both", expand=True, padx=1, pady=1)
-        self.drop_lb.bind("<Return>",           self._on_drop_select)
-        self.drop_lb.bind("<Double-Button-1>",  self._on_drop_select)
-        self.drop_lb.bind("<Escape>",           lambda e: self._hide_dropdown())
-        self.drop_lb.bind("<Up>",               self._drop_up)
+        self.drop_lb.bind("<Return>", self._on_drop_select)
+        self.drop_lb.bind("<Double-Button-1>", self._on_drop_select)
+        self.drop_lb.bind("<Escape>", lambda e: self._hide_dropdown())
+        self.drop_lb.bind("<Up>", self._drop_up)
 
         # browse button
         tk.Button(page, text="🎵  Browse genre tree  →",
@@ -346,7 +346,7 @@ class PlaylistifyApp(tk.Tk):
         text is attempted as a genre name.
         """
         typed = self.genre_var.get().strip().lower()
-        sel   = self.drop_lb.curselection()
+        sel = self.drop_lb.curselection()
         genre = self.drop_lb.get(sel[0]) if sel else typed
         self._try_add_genre(genre)
 
@@ -453,14 +453,14 @@ class PlaylistifyApp(tk.Tk):
 
         # Separate "↑ Up" button to navigate up within the tree hierarchy
         self.tree_back_btn = tk.Button(page, text="↑ Up",
-                                        font=self.font_small, bg=SURFACE, fg=TEXT_DIM,
-                                        relief="flat", bd=0, cursor="hand2",
-                                        activebackground=BORDER,
-                                        command=self._tree_drill_up)
+                                       font=self.font_small, bg=SURFACE, fg=TEXT_DIM,
+                                       relief="flat", bd=0, cursor="hand2",
+                                       activebackground=BORDER,
+                                       command=self._tree_drill_up)
         self.tree_back_btn.place(x=160, y=60)
 
         self.tree_breadcrumb = tk.Label(page, text="root",
-                                         font=self.font_small, bg=BG, fg=TEXT_DIM)
+                                        font=self.font_small, bg=BG, fg=TEXT_DIM)
         self.tree_breadcrumb.place(relx=0.5, y=68, anchor="center")
 
         tk.Label(page,
@@ -469,11 +469,11 @@ class PlaylistifyApp(tk.Tk):
                  ).place(relx=0.5, y=90, anchor="center")
 
         self.tree_canvas = tk.Canvas(page, bg=BG, highlightthickness=0,
-                                      width=720, height=616)
+                                     width=720, height=616)
         self.tree_canvas.place(x=0, y=106)
 
-        self._tree_path:    list[str] = []
-        self._tree_current: str       = "root"
+        self._tree_path: list[str] = []
+        self._tree_current: str = "root"
 
         self._tree_render()
 
@@ -494,25 +494,25 @@ class PlaylistifyApp(tk.Tk):
                 360, 300, text="No sub-genres available.",
                 font=self.font_label, fill=TEXT_DIM)
         else:
-            depth                = len(self._tree_path)
-            fill_col, text_col  = BUBBLE_COLORS.get(depth, ("#E0E0E0", "#212121"))
-            n                   = len(children)
-            W, H                = 720, 616
-            r                   = max(36, min(68, int(230 / max(n, 1) ** 0.5)))
-            cols                = max(1, math.ceil(math.sqrt(n * 1.6)))
-            rows                = math.ceil(n / cols)
-            pad_x               = W / (cols + 1)
-            pad_y               = H / (rows + 1)
+            depth = len(self._tree_path)
+            fill_col, text_col = BUBBLE_COLORS.get(depth, ("#E0E0E0", "#212121"))
+            n = len(children)
+            w, h = 720, 616
+            r = max(36, min(68, int(230 / max(n, 1) ** 0.5)))
+            cols = max(1, math.ceil(math.sqrt(n * 1.6)))
+            rows = math.ceil(n / cols)
+            pad_x = w / (cols + 1)
+            pad_y = h / (rows + 1)
 
             for idx, genre in enumerate(children):
                 col = idx % cols
                 row = idx // cols
-                cx  = pad_x * (col + 1)
-                cy  = pad_y * (row + 1)
+                cx = pad_x * (col + 1)
+                cy = pad_y * (row + 1)
 
-                has_ch  = bool(CHILDREN.get(genre))
+                has_ch = bool(CHILDREN.get(genre))
                 outline = ACCENT if has_ch else BORDER_DARK
-                lw      = 2    if has_ch else 1
+                lw = 2 if has_ch else 1
 
                 # shadow
                 self.tree_canvas.create_oval(
@@ -530,11 +530,11 @@ class PlaylistifyApp(tk.Tk):
                     cx, cy, text=lbl, font=self.font_bubble, fill=text_col)
 
                 # + badge
-                bx, by  = cx + r - 10, cy - r + 10
-                bid     = self.tree_canvas.create_oval(
+                bx, by = cx + r - 10, cy - r + 10
+                bid = self.tree_canvas.create_oval(
                     bx - 9, by - 9, bx + 9, by + 9,
                     fill=ACCENT, outline="")
-                pid     = self.tree_canvas.create_text(
+                pid = self.tree_canvas.create_text(
                     bx, by, text="+",
                     font=tkfont.Font(size=10, weight="bold"), fill="white")
 
@@ -550,7 +550,7 @@ class PlaylistifyApp(tk.Tk):
                     self.tree_canvas.tag_bind(
                         item, "<Leave>",
                         lambda e, o=oid, ol=outline, lw2=lw:
-                            self.tree_canvas.itemconfigure(o, outline=ol, width=lw2))
+                        self.tree_canvas.itemconfigure(o, outline=ol, width=lw2))
 
                 # add on badge/plus
                 for item in (bid, pid):
@@ -633,11 +633,11 @@ class PlaylistifyApp(tk.Tk):
         btn_frame.place(relx=0.5, y=310, anchor="center")
 
         self._viral_yes = self._pill_btn(btn_frame, "Yes — give me hits",
-                                          lambda: self._set_viral(True))
+                                         lambda: self._set_viral(True))
         self._viral_yes.pack(side="left", padx=16)
 
         self._viral_no = self._pill_btn(btn_frame, "No — surprise me",
-                                         lambda: self._set_viral(False))
+                                        lambda: self._set_viral(False))
         self._viral_no.pack(side="left", padx=16)
 
         self._set_viral(False)
@@ -662,12 +662,12 @@ class PlaylistifyApp(tk.Tk):
         is available when _generate runs.
         """
         self.preferred_viral = value
-        active   = {"bg": ACCENT,   "fg": BG,
-                    "highlightbackground": ACCENT,      "highlightthickness": 0}
-        inactive = {"bg": SURFACE,  "fg": TEXT_DIM,
+        active = {"bg": ACCENT, "fg": BG,
+                  "highlightbackground": ACCENT, "highlightthickness": 0}
+        inactive = {"bg": SURFACE, "fg": TEXT_DIM,
                     "highlightbackground": BORDER_DARK, "highlightthickness": 1}
-        self._viral_yes.configure(**(active   if value else inactive))  # type: ignore[arg-type]
-        self._viral_no.configure(**(inactive  if value else active))    # type: ignore[arg-type]
+        self._viral_yes.configure(**(active if value else inactive))  # type: ignore[arg-type]
+        self._viral_no.configure(**(inactive if value else active))  # type: ignore[arg-type]
 
     # ══════════════════════════════════════════════════════════════════════════
     # PAGE 3 — Energy level
@@ -692,12 +692,12 @@ class PlaylistifyApp(tk.Tk):
                  font=self.font_small, bg=BG, fg=TEXT_DIM
                  ).place(relx=0.5, y=206, anchor="center")
 
-        self.energy_var   = tk.IntVar(value=5)
+        self.energy_var = tk.IntVar(value=5)
         self.energy_label = tk.Label(page, text="5", font=self.font_big_num,
-                                      bg=BG, fg=ACCENT)
+                                     bg=BG, fg=ACCENT)
         self.energy_label.place(relx=0.5, y=290, anchor="center")
 
-        tk.Label(page, text="CALM",    font=self.font_small, bg=BG,
+        tk.Label(page, text="CALM", font=self.font_small, bg=BG,
                  fg=TEXT_DIM).place(relx=0.5, y=356, anchor="center", x=-220)
         tk.Label(page, text="INTENSE", font=self.font_small, bg=BG,
                  fg=TEXT_DIM).place(relx=0.5, y=356, anchor="center", x=220)
@@ -752,14 +752,14 @@ class PlaylistifyApp(tk.Tk):
                  ).place(relx=0.5, y=322, anchor="center")
 
         self.gen_btn = tk.Button(page, text="Generate Playlist  →",
-                                  font=self.font_label, bg=ACCENT, fg=BG,
-                                  relief="flat", bd=0, cursor="hand2",
-                                  activebackground=ACCENT_DIM, activeforeground=BG,
-                                  padx=28, pady=12, command=self._generate)
+                                 font=self.font_label, bg=ACCENT, fg=BG,
+                                 relief="flat", bd=0, cursor="hand2",
+                                 activebackground=ACCENT_DIM, activeforeground=BG,
+                                 padx=28, pady=12, command=self._generate)
         self.gen_btn.place(relx=0.5, y=420, anchor="center")
 
         self.gen_status = tk.Label(page, text="", font=self.font_small,
-                                    bg=BG, fg=TEXT_DIM, wraplength=500)
+                                   bg=BG, fg=TEXT_DIM, wraplength=500)
         self.gen_status.place(relx=0.5, y=472, anchor="center")
 
     # ══════════════════════════════════════════════════════════════════════════
@@ -780,7 +780,7 @@ class PlaylistifyApp(tk.Tk):
                  bg=BG, fg=ACCENT).place(relx=0.5, y=40, anchor="center")
 
         self.results_subtitle = tk.Label(page, text="",
-                                          font=self.font_small, bg=BG, fg=TEXT_DIM)
+                                         font=self.font_small, bg=BG, fg=TEXT_DIM)
         self.results_subtitle.place(relx=0.5, y=70, anchor="center")
 
         tk.Frame(page, bg=BORDER, height=1).place(
@@ -794,17 +794,17 @@ class PlaylistifyApp(tk.Tk):
         sb.pack(side="right", fill="y")
 
         self.results_canvas = tk.Canvas(container, bg=BG,
-                                         highlightthickness=0,
-                                         yscrollcommand=sb.set)
+                                        highlightthickness=0,
+                                        yscrollcommand=sb.set)
         self.results_canvas.pack(side="left", fill="both", expand=True)
         sb.configure(command=self.results_canvas.yview)
 
         self.results_inner = tk.Frame(self.results_canvas, bg=BG)
         self.results_canvas.create_window((0, 0), window=self.results_inner,
-                                           anchor="nw")
+                                          anchor="nw")
         self.results_inner.bind("<Configure>",
-                                 lambda e: self.results_canvas.configure(
-                                     scrollregion=self.results_canvas.bbox("all")))
+                                lambda e: self.results_canvas.configure(
+                                    scrollregion=self.results_canvas.bbox("all")))
 
     def _populate_results(self, songs: list[tuple[float, str, str]]) -> None:
         """Populate the results page with the given list of recommended songs.
@@ -846,9 +846,9 @@ class PlaylistifyApp(tk.Tk):
             tk.Label(info, text=genre, font=self.font_small,
                      bg=BG, fg=TEXT_DIM, anchor="w").pack(fill="x")
 
-            pct   = int(weight * 100)
+            pct = int(weight * 100)
             badge = tk.Frame(row, bg=TAG_BG,
-                              highlightbackground=TAG_BORDER, highlightthickness=1)
+                             highlightbackground=TAG_BORDER, highlightthickness=1)
             badge.pack(side="right", padx=8)
             tk.Label(badge, text=f"{pct}% match",
                      font=self.font_small, bg=TAG_BG, fg=ACCENT_DIM,
@@ -866,7 +866,7 @@ class PlaylistifyApp(tk.Tk):
     def _generate(self) -> None:
         """Run the full playlist recommendation pipeline and navigate to the results page.
 
-        Mirrors the logic in main.py exactly:
+        Logic:
             1. Validate the playlist size input (must be a positive integer).
             2. Ensure at least one genre has been selected.
             3. Load the genre tree and song graph from CSV on first run (cached thereafter).
@@ -913,7 +913,7 @@ class PlaylistifyApp(tk.Tk):
         self.update()
 
         # filter candidates — exact genre match, same logic as main.py
-        candidate_songs: set[tuple[int, object]] = set()
+        candidate_songs: set[tuple[int, sg.Song]] = set()
         for genre in self.preferred_genres:
             genre_node = self._tree_genre.find(genre)
             if genre_node is None:
@@ -921,7 +921,7 @@ class PlaylistifyApp(tk.Tk):
             for song in self._graph_song.get_all_songs():
                 if song.genre != genre:
                     continue
-                meets_energy     = song.features.energy >= self.preferred_energy
+                meets_energy = song.features.energy >= self.preferred_energy
                 meets_popularity = (song.popularity >= VIRAL_THRESHOLD
                                     if self.preferred_viral else True)
                 if meets_energy and meets_popularity:

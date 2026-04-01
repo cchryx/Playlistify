@@ -10,8 +10,9 @@ Copyright (c) 2026 Xing Xu Chen, Tianqi Pan, Norah Liu, Denise Ma
 import math
 import tkinter as tk
 from tkinter import font as tkfont
+from typing import Optional
 
-from genre_tree import GENRE_HIERARCHY, load_genre_tree
+from genre_tree import GENRE_HIERARCHY, GenreTree, load_genre_tree
 import song_graph as sg
 
 # ── Palette (white theme) ──────────────────────────────────────────────────────
@@ -83,6 +84,71 @@ class PlaylistifyApp(tk.Tk):
         - self.recommend_n_songs >= 0
     """
 
+    # ── Instance attribute declarations ───────────────────────────────────────
+    # User preferences
+    preferred_genres: list[str]
+    preferred_viral: bool
+    preferred_energy: float
+    recommend_n_songs: int
+
+    # Data structures (None until first Generate run)
+    _tree_genre: Optional[GenreTree]
+    _graph_song: Optional[sg.SongGraph]
+
+    # Genre tree explorer state
+    _tree_path: list[str]
+    _tree_current: str
+
+    # Page management
+    pages: list[tk.Frame]
+    current_page: int
+    dots: list[tk.Label]
+
+    # Font attributes (assigned in _build_fonts)
+    font_title: tkfont.Font
+    font_label: tkfont.Font
+    font_small: tkfont.Font
+    font_input: tkfont.Font
+    font_nav: tkfont.Font
+    font_tag: tkfont.Font
+    font_bubble: tkfont.Font
+    font_result: tkfont.Font
+    font_big_num: tkfont.Font
+
+    # Navigation bar (assigned in _build_nav)
+    dot_frame: tk.Frame
+    dots: list[tk.Label]
+
+    # Page 0 — Genre selection (assigned in _build_page_genre)
+    genre_var: tk.StringVar
+    search_entry: tk.Entry
+    drop_frame: tk.Frame
+    drop_lb: tk.Listbox
+    tag_frame: tk.Frame
+
+    # Page 1 — Genre tree explorer (assigned in _build_page_tree)
+    tree_back_btn: tk.Button
+    tree_breadcrumb: tk.Label
+    tree_canvas: tk.Canvas
+
+    # Page 2 — Viral preference (assigned in _build_page_viral)
+    _viral_yes: tk.Button
+    _viral_no: tk.Button
+
+    # Page 3 — Energy level (assigned in _build_page_energy)
+    energy_var: tk.IntVar
+    energy_label: tk.Label
+
+    # Page 4 — Playlist size + Generate (assigned in _build_page_count)
+    count_var: tk.StringVar
+    gen_btn: tk.Button
+    gen_status: tk.Label
+
+    # Page 5 — Results (assigned in _build_page_results)
+    results_subtitle: tk.Label
+    results_canvas: tk.Canvas
+    results_inner: tk.Frame
+
     def __init__(self) -> None:
         """Initialize the Playlistify window, build all pages, and display page 0.
 
@@ -96,21 +162,21 @@ class PlaylistifyApp(tk.Tk):
         self.resizable(False, False)
         self.configure(bg=BG)
 
-        self.preferred_genres: list[str] = []
-        self.preferred_viral: bool = False
-        self.preferred_energy: float = 0.5
-        self.recommend_n_songs: int = 10
+        self.preferred_genres = []
+        self.preferred_viral = False
+        self.preferred_energy = 0.5
+        self.recommend_n_songs = 10
 
         self._tree_genre = None
         self._graph_song = None
 
-        self._tree_path: list[str] = []
-        self._tree_current: str = "root"
+        self._tree_path = []
+        self._tree_current = "root"
 
         self._build_fonts()
 
-        self.pages: list[tk.Frame] = []
-        self.current_page: int = 0
+        self.pages = []
+        self.current_page = 0
 
         self._build_page_genre()  # 0
         self._build_page_tree()  # 1
@@ -165,7 +231,7 @@ class PlaylistifyApp(tk.Tk):
 
         self.dot_frame = tk.Frame(nav, bg=SURFACE)
         self.dot_frame.place(relx=0.5, rely=0.5, anchor="center")
-        self.dots: list[tk.Label] = []
+        self.dots = []
         for _ in range(4):
             d = tk.Label(self.dot_frame, text="●", bg=SURFACE,
                          font=tkfont.Font(size=8))
@@ -304,13 +370,13 @@ class PlaylistifyApp(tk.Tk):
                  font=self.font_small, bg=BG, fg=BORDER_DARK
                  ).place(relx=0.5, y=510, anchor="center")
 
-    def _clear_placeholder(self, _: tk.Event) -> None:  # type: ignore[type-arg]
+    def _clear_placeholder(self, _event: tk.Event) -> None:  # type: ignore[type-arg]
         """Clear the placeholder text when the search entry gains focus."""
         if self.search_entry.get() == "Search genres…":
             self.search_entry.delete(0, "end")
             self.search_entry.configure(fg=TEXT)
 
-    def _restore_placeholder(self, _: tk.Event) -> None:  # type: ignore[type-arg]
+    def _restore_placeholder(self, _event: tk.Event) -> None:  # type: ignore[type-arg]
         """Restore the placeholder text when the search entry loses focus if empty."""
         if not self.search_entry.get():
             self.search_entry.insert(0, "Search genres…")
@@ -339,10 +405,15 @@ class PlaylistifyApp(tk.Tk):
         self.drop_frame.lift()
 
     def _hide_dropdown(self) -> None:
-        """Hide the genre search dropdown by removing it from the layout."""
-        self.drop_frame.place_forget()
+        """Hide the genre search dropdown by removing it from the layout.
 
-    def _on_genre_enter(self, _: tk.Event) -> None:  # type: ignore[type-arg]
+        Does nothing if drop_frame has not yet been created, which can occur
+        when the StringVar trace fires during widget initialization.
+        """
+        if hasattr(self, 'drop_frame'):
+            self.drop_frame.place_forget()
+
+    def _on_genre_enter(self, _event: tk.Event) -> None:  # type: ignore[type-arg]
         """Handle the Return key in the search entry.
 
         If a dropdown item is highlighted it is used; otherwise the raw typed
@@ -353,13 +424,13 @@ class PlaylistifyApp(tk.Tk):
         genre = self.drop_lb.get(sel[0]) if sel else typed
         self._try_add_genre(genre)
 
-    def _on_drop_select(self, _: tk.Event) -> None:  # type: ignore[type-arg]
+    def _on_drop_select(self, _event: tk.Event) -> None:  # type: ignore[type-arg]
         """Add the currently highlighted dropdown item to the selected genres."""
         sel = self.drop_lb.curselection()
         if sel:
             self._try_add_genre(self.drop_lb.get(sel[0]))
 
-    def _drop_focus_first(self, _: tk.Event) -> None:  # type: ignore[type-arg]
+    def _drop_focus_first(self, _event: tk.Event) -> None:  # type: ignore[type-arg]
         """Move keyboard focus from the search entry into the dropdown listbox.
 
         Called when the user presses the Down arrow key while the entry is focused,
@@ -369,7 +440,7 @@ class PlaylistifyApp(tk.Tk):
             self.drop_lb.focus_set()
             self.drop_lb.selection_set(0)
 
-    def _drop_up(self, _: tk.Event) -> None:  # type: ignore[type-arg]
+    def _drop_up(self, _event: tk.Event) -> None:  # type: ignore[type-arg]
         """Return keyboard focus to the search entry when Up is pressed on the first dropdown item."""
         sel = self.drop_lb.curselection()
         if sel and sel[0] == 0:
@@ -956,7 +1027,7 @@ if __name__ == "__main__":
         'max-line-length': 120,
         'extra-imports': ['math', 'tkinter', 'song_graph', 'genre_tree'],
         'allowed-io': ['load_song_graph'],
-        'disable': ['C9103', 'E9972', 'R0902']
+        # 'disable': ['C9103', 'E9972', 'R0902']
     })
 
     app = PlaylistifyApp()

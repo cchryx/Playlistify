@@ -337,7 +337,7 @@ def _load_edges(song_graph: SongGraph, similarity_threshold: float) -> None:
                 song_graph.add_edge(all_songs[i], all_songs[j], similarity)
 
 
-def load_song_graph(song_file: str, similarity_threshold: float = 0.98) -> SongGraph:
+def load_song_graph(song_file: str, similarity_threshold: float = 0.99) -> SongGraph:
     """Return a SongGraph loaded from song_file, with edges between songs whose
     cosine similarity is at or above similarity_threshold.
 

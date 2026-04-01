@@ -32,7 +32,7 @@ def clean_song_data(input_path: str, output_path: str) -> None:
 
 
 if __name__ == "__main__":
-    # clean_song_data(INPUT_FILE, OUTPUT_FILE)
+    clean_song_data(INPUT_FILE, OUTPUT_FILE)
 
     import python_ta
     python_ta.check_all(config={

@@ -62,17 +62,40 @@ def run_console() -> None:
     return None
 
 
-def _collect_genres() -> list[str]:
-    """Prompt user for genres and return a list of valid choices."""
-    selected = []
+def _should_add_another() -> bool:
+    """Prompt the user to decide whether to add another genre.
+
+    Returns True if 'yes', False if 'no'. Forces valid input.
+    """
     while True:
-        genre = input("Enter a genre you want: ")
+        repeat = input("Add another genre? (yes/no): ").strip().lower()
+        if repeat == 'yes':
+            return True
+        if repeat == 'no':
+            return False
+        print("Invalid response, please enter 'yes' or 'no'.")
+
+    return False  # Satisfy PythonTA
+
+
+def _collect_genres() -> list[str]:
+    """Prompt user for genres and return a list of valid choices.
+
+    Continues to prompt until the user explicitly says 'no' to adding more.
+    """
+    selected = []
+    in_selection_mode = True
+
+    while in_selection_mode:
+        genre = input("Enter a genre you want: ").strip().lower()
+
         if genre not in genre_tree.GENRE_HIERARCHY:
             print("Genre not found in genre tree, try again.")
         else:
             selected.append(genre)
-            if input("Add another genre? (yes/no): ").lower() != 'yes':
-                break
+            # Flattened: Calling the helper instead of nesting another loop
+            in_selection_mode = _should_add_another()
+
     return selected
 
 
@@ -84,7 +107,7 @@ def _collect_viral() -> bool:
             return ans == 'yes'
         print("Invalid response, please enter yes or no.")
 
-    return False
+    return False  # Satisfy PythonTA
 
 
 def _collect_energy() -> float:
@@ -99,7 +122,7 @@ def _collect_energy() -> float:
         except ValueError:
             print("Invalid input, please enter a number.")
 
-    return 0.0
+    return 0.0  # Satisfy PythonTA
 
 
 def _collect_count() -> int:
@@ -110,7 +133,7 @@ def _collect_count() -> int:
             return int(val)
         print("Please enter a whole number greater than 0.")
 
-    return 0
+    return 0  # Satisfy PythonTA
 
 
 def _filter_candidates(genres: list[str], tree: Any, graph: Any,
@@ -172,6 +195,6 @@ if __name__ == '__main__':
         'max-line-length': 120,
         'extra-imports': ['time', 'genre_tree', 'song_graph', 'graph_visualization'],
         'allowed-io': ['run_console', '_collect_genres', '_collect_viral',
-                       '_collect_energy', '_collect_count'],
+                       '_collect_energy', '_collect_count', '_should_add_another'],
     })
     run_console()

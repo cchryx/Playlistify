@@ -35,7 +35,7 @@ def extract_random_subset(input_path: str, output_path: str,
 
 
 if __name__ == "__main__":
-    # extract_random_subset(INPUT_CSV, OUTPUT_CSV)
+    extract_random_subset(INPUT_CSV, OUTPUT_CSV)
 
     import python_ta
     python_ta.check_all(config={

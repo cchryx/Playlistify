@@ -1,151 +1,200 @@
 """
 CSC111 Project: Playlistify (Mood-Aware Music Recommendation Engine)
 
-This is the main entry point for Playlistify. It loads song and genre data,
-filters songs based on simulated user preferences, and builds a candidate
-playlist for further recommendation.
+This module contains the console-based interface for the recommendation engine.
+It collects user preferences via the terminal and displays results.
 
 Copyright (c) 2026 Xing Xu Chen, Tianqi Pan, Norah Liu, Denise Ma
 """
+from __future__ import annotations
 import time
+from typing import Any
 
 import genre_tree
+import graph_visualization
 import song_graph
 
-if __name__ == '__main__':
-    # When you are ready to check your work with python_ta, uncomment the following lines.
-    # (Delete the "#" and space before each line.)
-    # IMPORTANT: keep this code indented inside the "if __name__ == '__main__'" block
-    import python_ta
 
-    python_ta.check_all(config={
-        'max-line-length': 120,
-        'extra-imports': ['time', 'genre_tree', 'song_graph'],
-        'allowed-io': ['load_song_graph'],
-        'disable': []
-    })
+def run_console() -> None:
+    """Run the interactive console version of Playlistify.
 
+    Loads data, collects user preferences, filters songs, and triggers
+    the 3D graph visualization.
+    """
     print("Loading song graph...")
-
     start_time = time.perf_counter()
 
     # Load data structures from CSV
     tree_genre = genre_tree.load_genre_tree('data/spotify_data.csv')
     graph_song = song_graph.load_song_graph('data/spotify_data.csv')
 
-    end_time = time.perf_counter()
-    duration = end_time - start_time
+    duration = time.perf_counter() - start_time
     print(f"Loading completed in {duration:.2f} seconds.")
 
-    preferred_genres = []  # genres the user enjoys
-    preferred_energy = 0.0  # minimum energy level (0.0 to 1.0)
-    preferred_viral = False  # True = popular songs, False = hidden gems
-    recommend_n_songs = 0  # number of songs in the playlist
+    # 1. Collect Preferences via Helpers
+    pref_genres = _collect_genres()
 
-    # --- Collect preferred genres (allow multiple) ---
-    # needs the exact spelling in genre_tree, not case-sensitive
+    # Bundle preferences into a dictionary to reduce parameter count (R0913 fix)
+    preferences = {
+        'energy': _collect_energy(),
+        'viral': _collect_viral(),
+        'threshold': 10
+    }
+    n_songs = _collect_count()
+
+    # 2. Filter Candidate Songs
+    candidates = _filter_candidates(pref_genres, tree_genre, graph_song, preferences)
+
+    print(f"\nSongs matching your initial filters: {len(candidates)}")
+
+    # 3. Generate Recommendations via Graph
+    seed_songs = sorted(list(candidates), key=lambda x: x[0], reverse=True)[:5]
+    recommendations = _get_graph_recommendations(seed_songs, graph_song)
+    final_list = sorted(list(recommendations), reverse=True)[:n_songs]
+
+    # 4. Display Results
+    print("\nYour playlist:")
+    for i, song in enumerate(final_list):
+        print(f"{i + 1}. {song[1]} - {song[2]}")
+
+    # 5. Launch 3D Visualization
+    _launch_viz(seed_songs, graph_song, final_list)
+    return None
+
+
+def _should_add_another() -> bool:
+    """Prompt the user to decide whether to add another genre.
+
+    Returns True if 'yes', False if 'no'. Forces valid input.
+    """
     while True:
-        genre = input("Enter a genre you want (must match exact genre or sub-genre in the tree): ")
+        repeat = input("Add another genre? (yes/no): ").strip().lower()
+        if repeat == 'yes':
+            return True
+        if repeat == 'no':
+            return False
+        print("Invalid response, please enter 'yes' or 'no'.")
+
+    return False  # Satisfy PythonTA
+
+
+def _collect_genres() -> list[str]:
+    """Prompt user for genres and return a list of valid choices.
+
+    Continues to prompt until the user explicitly says 'no' to adding more.
+    """
+    selected = []
+    in_selection_mode = True
+
+    while in_selection_mode:
+        genre = input("Enter a genre you want: ").strip().lower()
 
         if genre not in genre_tree.GENRE_HIERARCHY:
             print("Genre not found in genre tree, try again.")
         else:
-            preferred_genres.append(genre)
-            another = input("Add another genre? (yes/no): ")
-            if another.lower() != 'yes':
-                break
+            selected.append(genre)
+            # Flattened: Calling the helper instead of nesting another loop
+            in_selection_mode = _should_add_another()
 
-    # --- Collect viral song preference ---
-    # needs to be either 'yes' or 'no', not case-sensitive
-    while True:
-        bool_viral_song = input("Do you like viral songs? (yes/no): ")
-        if bool_viral_song.lower() == 'yes':
-            preferred_viral = True
-            break
-        elif bool_viral_song.lower() == 'no':
-            preferred_viral = False
-            break
-        else:
-            print("Invalid response, please enter yes or no.")
+    return selected
 
-    # --- Collect energy level ---
-    # a float between [1, 10], inclusive — mapped to [0.0, 1.0] for song.energy
+
+def _collect_viral() -> bool:
+    """Prompt user for popularity preference."""
     while True:
-        energy_level = input("Enter your energy level from 1 to 10: ")
+        ans = input("Do you like viral songs? (yes/no): ").lower()
+        if ans in {'yes', 'no'}:
+            return ans == 'yes'
+        print("Invalid response, please enter yes or no.")
+
+    return False  # Satisfy PythonTA
+
+
+def _collect_energy() -> float:
+    """Prompt user for energy level (1-10) and return normalized float."""
+    while True:
+        val = input("Enter your energy level from 1 to 10: ")
         try:
-            energy_value = float(energy_level)
-            if 1 <= energy_value <= 10:
-                preferred_energy = energy_value / 10  # normalize to [0.0, 1.0]
-                break
-            else:
-                print("Invalid energy level, please enter a number between 1 and 10.")
+            energy_val = float(val)
+            if 1 <= energy_val <= 10:
+                return energy_val / 10
+            print("Invalid energy level, please enter a number between 1 and 10.")
         except ValueError:
             print("Invalid input, please enter a number.")
 
-    # --- Collect number of songs in playlist ---
+    return 0.0  # Satisfy PythonTA
+
+
+def _collect_count() -> int:
+    """Prompt user for playlist size."""
     while True:
-        num_songs_input = input("How many songs would you like in your playlist? ")
-        try:
-            recommend_n_songs = int(num_songs_input)
-            if recommend_n_songs > 0:
-                break
+        val = input("How many songs would you like in your playlist? ")
+        if val.isdigit() and int(val) > 0:
+            return int(val)
+        print("Please enter a whole number greater than 0.")
+
+    return 0  # Satisfy PythonTA
+
+
+def _filter_candidates(genres: list[str], tree: Any, graph: Any,
+                       prefs: dict[str, Any]) -> set:
+    """Return a set of (popularity, song) tuples based on user filters.
+
+    Uses a dictionary for preferences to keep parameter count low.
+    """
+    candidates = set()
+    for g in genres:
+        if tree.find(g) is not None:
+            _add_genre_candidates(g, graph, prefs, candidates)
+
+    return candidates
+
+
+def _add_genre_candidates(genre: str, graph: Any,
+                          prefs: dict[str, Any], candidates: set) -> None:
+    """Check all songs in the graph and add those matching the genre and filters."""
+    for song in graph.get_all_songs():
+        if song.genre == genre:
+            meets_e = song.features.energy >= prefs['energy']
+
+            # Popularity check
+            if prefs['viral']:
+                meets_p = song.popularity >= prefs['threshold']
             else:
-                print("Please enter a number greater than 0.")
-        except ValueError:
-            print("Invalid input, please enter a whole number.")
+                meets_p = True
 
-    print("\nPreferences collected:")
-    print(f"  Genres: {preferred_genres}")
-    print(f"  Viral songs: {preferred_viral}")
-    print(f"  Min energy: {preferred_energy}")
-    print(f"  Playlist size: {recommend_n_songs}")
+            if meets_e and meets_p:
+                candidates.add((song.popularity, song))
 
-    viral_threshold = 10  # popularity cutoff out of 100
+    return None
 
-    # --- Filter candidate songs based on user preferences ---
-    candidate_songs = set()
 
-    for genre in preferred_genres:
-        genre_node = tree_genre.find(genre)
+def _get_graph_recommendations(seeds: list, graph: Any) -> set:
+    """Find similar songs using graph neighbors of the seed songs."""
+    recs = set()
+    for _, song in seeds:
+        for neighbor in graph.get_neighbours(song):
+            weight = graph.get_weight(song, neighbor)
+            recs.add((weight, neighbor.track_name, neighbor.genre))
+    return recs
 
-        if genre_node is None:
-            continue
 
-        for song in graph_song.get_all_songs():
-            if song.genre != genre:
-                continue
+def _launch_viz(seeds: list, graph: Any, final_list: list) -> None:
+    """Map song names back to objects and launch the 3D Plotly visualization."""
+    seed_objs = [s for _, s in seeds]
+    song_map = {s.track_name: s for s in graph.get_all_songs()}
+    final_objs = {song_map[name] for _, name, _ in final_list if name in song_map}
 
-            meets_energy = song.features.energy >= preferred_energy
-            meets_popularity = (song.popularity >= viral_threshold) if preferred_viral else True
+    graph_visualization.run_visualization(seed_objs, graph, final_objs)
+    return None
 
-            if meets_energy and meets_popularity:
-                candidate_songs.add((song.popularity, song))
 
-    print(f"Number of songs in user preference filtering stage: {len(candidate_songs)}")
-
-    # Sort candidate songs by popularity (highest first) and take the top N as seeds.
-    # These seed songs represent the best match to the user's preferences and will
-    # be used to find similar songs via the graph's neighbour edges.
-    num_top_ranked = 5
-    seed_songs = sorted(list(candidate_songs), key=lambda x: x[0], reverse=True)[:num_top_ranked]
-
-    print(f"Number of songs in popularity filtering stage: {len(seed_songs)}")
-
-    # For each seed song, look up its neighbours in the song graph.
-    # Neighbours are songs connected by an edge, meaning they are acoustically
-    # similar based on the cosine angle of their audio features.
-    # Each recommended song is stored as (weight, track_name, genre) so the
-    # final list can be sorted by similarity weight.
-    song_graph_recommendation = set()
-    for _, song in seed_songs:
-        for neighbour_song in graph_song.get_neighbours(song):
-            weight = graph_song.get_weight(song, neighbour_song)
-            song_graph_recommendation.add((weight, neighbour_song.track_name, neighbour_song.genre))
-
-    # Sort recommendations by similarity weight (highest first) and take the top N.
-    final_recommendation = sorted(list(song_graph_recommendation), reverse=True)[:recommend_n_songs]
-
-    # Print final recommendations in a numbered list with song name and genre.
-    print("\nYour playlist:")
-    for i, song in enumerate(final_recommendation):
-        print(f"{i + 1}. {song[1]} - {song[2]}")
+if __name__ == '__main__':
+    import python_ta
+    python_ta.check_all(config={
+        'max-line-length': 120,
+        'extra-imports': ['time', 'genre_tree', 'song_graph', 'graph_visualization'],
+        'allowed-io': ['run_console', '_collect_genres', '_collect_viral',
+                       '_collect_energy', '_collect_count', '_should_add_another'],
+    })
+    run_console()

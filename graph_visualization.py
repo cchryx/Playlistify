@@ -157,7 +157,7 @@ def _get_node_coordinates(graph_nx: nx.Graph, pos: dict) -> tuple:
     x_vals = [float(pos[k][0]) for k in graph_nx.nodes]
     y_vals = [float(pos[k][1]) for k in graph_nx.nodes]
     z_vals = [float(pos[k][2]) for k in graph_nx.nodes]
-    return (x_vals, y_vals, z_vals)
+    return x_vals, y_vals, z_vals
 
 
 def _get_edge_coordinates(graph_nx: nx.Graph, pos: dict) -> tuple:
@@ -167,7 +167,7 @@ def _get_edge_coordinates(graph_nx: nx.Graph, pos: dict) -> tuple:
         x_e += [float(pos[edge[0]][0]), float(pos[edge[1]][0]), None]
         y_e += [float(pos[edge[0]][1]), float(pos[edge[1]][1]), None]
         z_e += [float(pos[edge[0]][2]), float(pos[edge[1]][2]), None]
-    return (x_e, y_e, z_e)
+    return x_e, y_e, z_e
 
 
 def _build_edge_trace(coords: tuple) -> go.Scatter3d:

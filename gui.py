@@ -556,7 +556,7 @@ class PlaylistifyApp(tk.Tk):
                 font=self.font_label, fill=TEXT_DIM)
         else:
             depth = len(self._tree_path)
-            fill_col, text_col = BUBBLE_COLORS.get(depth, ("#E8F5E9", "#1B5E20"))
+            _, text_col = BUBBLE_COLORS.get(depth, ("#E8F5E9", "#1B5E20"))
             n = len(children)
             w, h = 720, 600
             r = max(28, min(56, int(180 / max(n, 1) ** 0.5)))
@@ -575,37 +575,30 @@ class PlaylistifyApp(tk.Tk):
                 outline = BORDER_DARK
                 lw = 2
 
+                # darker fill for genres with sub-genres, lighter fill for leaf genres
+                if has_ch:
+                    bubble_fill = "#CFEBD6"
+                else:
+                    bubble_fill = "#EAF7EE"
+
                 # soft shadow
                 self.tree_canvas.create_oval(
                     cx - r + 4, cy - r + 6, cx + r + 4, cy + r + 6,
                     fill="#DADADA", outline=""
                 )
 
-                # bubble
+                # main bubble
                 oid = self.tree_canvas.create_oval(
                     cx - r, cy - r, cx + r, cy + r,
-                    fill=fill_col, outline=outline, width=lw
+                    fill=bubble_fill, outline=outline, width=lw
                 )
-
-                # subtle arc marker for genres with children
-                if has_ch:
-                    marker = self.tree_canvas.create_arc(
-                        cx - r + 10, cy - r + 10, cx + r - 10, cy + r - 10,
-                        start=25, extent=110, style="arc",
-                        outline=ACCENT, width=3
-                    )
-                else:
-                    marker = self.tree_canvas.create_oval(
-                        cx + r - 18, cy + r - 18, cx + r - 8, cy + r - 8,
-                        fill=ACCENT, outline=""
-                    )
 
                 lbl = genre if len(genre) <= 14 else genre[:13] + "…"
                 tid = self.tree_canvas.create_text(
                     cx, cy, text=lbl, font=self.font_bubble, fill=text_col, width=r * 1.5
                 )
 
-                for item in (oid, tid, marker):
+                for item in (oid, tid):
                     self.tree_canvas.tag_bind(
                         item, "<Button-1>",
                         lambda _, g=genre: self._tree_drill_down(g)
@@ -620,6 +613,29 @@ class PlaylistifyApp(tk.Tk):
                         lambda _, o=oid, ol=outline, lw2=lw:
                         self.tree_canvas.itemconfigure(o, outline=ol, width=lw2)
                     )
+
+                # only genres with sub-genres get a plus badge for direct selection
+                if has_ch:
+                    bx, by = cx + r - 12, cy - r + 12
+
+                    self.tree_canvas.create_oval(
+                        bx - 10 + 2, by - 10 + 2, bx + 10 + 2, by + 10 + 2,
+                        fill="#CFCFCF", outline=""
+                    )
+                    bid = self.tree_canvas.create_oval(
+                        bx - 10, by - 10, bx + 10, by + 10,
+                        fill=ACCENT, outline=BORDER_DARK, width=1
+                    )
+                    pid = self.tree_canvas.create_text(
+                        bx, by, text="+",
+                        font=tkfont.Font(size=11, weight="bold"), fill="white"
+                    )
+
+                    for item in (bid, pid):
+                        self.tree_canvas.tag_bind(
+                            item, "<Button-1>",
+                            lambda _, g=genre: self._tree_add_genre(g)
+                        )
 
         crumb = " › ".join(["root"] + self._tree_path) if self._tree_path else "root"
         self.tree_breadcrumb.configure(text=crumb)

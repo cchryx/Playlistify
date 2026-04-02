@@ -957,7 +957,6 @@ class PlaylistifyApp(tk.Tk):
         loaded song graph, then delegates to graph_visualization.run_visualization
         with the seed songs, full graph, and final recommendation set.
 
-        This mirrors the _launch_viz function in console_version.py exactly.
         The visualization opens as a Plotly figure in the default web browser
         and supports zoom and 360-degree rotation.
 

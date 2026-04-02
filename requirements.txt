@@ -12,3 +12,4 @@ numpy
 
 # Data visualization
 plotly
+networkx

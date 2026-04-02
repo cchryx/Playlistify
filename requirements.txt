@@ -13,3 +13,4 @@ numpy
 # Data visualization
 plotly
 networkx
+scipy

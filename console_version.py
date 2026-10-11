@@ -8,57 +8,52 @@ Copyright (c) 2026 Xing Xu Chen, Tianqi Pan, Norah Liu, Denise Ma
 """
 from __future__ import annotations
 import time
-from typing import Any
 
 import genre_tree
 import graph_visualization
+import recommender
 import song_graph
 
 
 def run_console() -> None:
     """Run the interactive console version of Playlistify.
 
-    Loads data, collects user preferences, filters songs, and triggers
+    Loads data, collects user preferences, builds the playlist, and triggers
     the 3D graph visualization.
     """
     print("Loading song graph...")
     start_time = time.perf_counter()
 
     # Load data structures from CSV
-    tree_genre = genre_tree.load_genre_tree('data/spotify_data.csv')
-    graph_song = song_graph.load_song_graph('data/spotify_data.csv')
+    tree_genre = genre_tree.load_genre_tree(recommender.DATA_FILE)
+    graph_song = song_graph.load_song_graph(recommender.DATA_FILE)
 
     duration = time.perf_counter() - start_time
     print(f"Loading completed in {duration:.2f} seconds.")
 
-    # 1. Collect Preferences via Helpers
+    # 1. Collect preferences
     pref_genres = _collect_genres()
-
-    # Bundle preferences into a dictionary to reduce parameter count (R0913 fix)
     preferences = {
         'energy': _collect_energy(),
         'viral': _collect_viral(),
-        'threshold': 10
+        'n': _collect_count(),
     }
-    n_songs = _collect_count()
 
-    # 2. Filter Candidate Songs
-    candidates = _filter_candidates(pref_genres, tree_genre, graph_song, preferences)
+    # 2. Build the playlist from the genre tree and the song graph
+    seeds, playlist = recommender.make_playlist(pref_genres, tree_genre, graph_song, preferences)
 
-    print(f"\nSongs matching your initial filters: {len(candidates)}")
+    if not playlist:
+        print("\nNo songs found. Try a broader genre or say 'no' to viral songs.")
+        return None
 
-    # 3. Generate Recommendations via Graph
-    seed_songs = sorted(list(candidates), key=lambda x: x[0], reverse=True)[:5]
-    recommendations = _get_graph_recommendations(seed_songs, graph_song)
-    final_list = sorted(list(recommendations), reverse=True)[:n_songs]
-
-    # 4. Display Results
+    # 3. Display results
     print("\nYour playlist:")
-    for i, song in enumerate(final_list):
-        print(f"{i + 1}. {song[1]} - {song[2]}")
+    for i, (weight, song) in enumerate(playlist):
+        print(f"{i + 1}. {song.track_name} by {song.artist_name} ({song.genre}, {int(weight * 100)}% match)")
 
-    # 5. Launch 3D Visualization
-    _launch_viz(seed_songs, graph_song, final_list)
+    # 4. Launch 3D visualization
+    print("\nOpening the recommendation graph in your browser...")
+    graph_visualization.run_visualization(seeds, graph_song, {item[1] for item in playlist})
     return None
 
 
@@ -102,7 +97,7 @@ def _collect_genres() -> list[str]:
 def _collect_viral() -> bool:
     """Prompt user for popularity preference."""
     while True:
-        ans = input("Do you like viral songs? (yes/no): ").lower()
+        ans = input("Do you like viral songs? (yes/no): ").strip().lower()
         if ans in {'yes', 'no'}:
             return ans == 'yes'
         print("Invalid response, please enter yes or no.")
@@ -136,64 +131,11 @@ def _collect_count() -> int:
     return 0  # Satisfy PythonTA
 
 
-def _filter_candidates(genres: list[str], tree: Any, graph: Any,
-                       prefs: dict[str, Any]) -> set:
-    """Return a set of (popularity, song) tuples based on user filters.
-
-    Uses a dictionary for preferences to keep parameter count low.
-    """
-    candidates = set()
-    for g in genres:
-        if tree.find(g) is not None:
-            _add_genre_candidates(g, graph, prefs, candidates)
-
-    return candidates
-
-
-def _add_genre_candidates(genre: str, graph: Any,
-                          prefs: dict[str, Any], candidates: set) -> None:
-    """Check all songs in the graph and add those matching the genre and filters."""
-    for song in graph.get_all_songs():
-        if song.genre == genre:
-            meets_e = song.features.energy >= prefs['energy']
-
-            # Popularity check
-            if prefs['viral']:
-                meets_p = song.popularity >= prefs['threshold']
-            else:
-                meets_p = True
-
-            if meets_e and meets_p:
-                candidates.add((song.popularity, song))
-
-    return None
-
-
-def _get_graph_recommendations(seeds: list, graph: Any) -> set:
-    """Find similar songs using graph neighbors of the seed songs."""
-    recs = set()
-    for _, song in seeds:
-        for neighbor in graph.get_neighbours(song):
-            weight = graph.get_weight(song, neighbor)
-            recs.add((weight, neighbor.track_name, neighbor.genre))
-    return recs
-
-
-def _launch_viz(seeds: list, graph: Any, final_list: list) -> None:
-    """Map song names back to objects and launch the 3D Plotly visualization."""
-    seed_objs = [s for _, s in seeds]
-    song_map = {s.track_name: s for s in graph.get_all_songs()}
-    final_objs = {song_map[name] for _, name, _ in final_list if name in song_map}
-
-    graph_visualization.run_visualization(seed_objs, graph, final_objs)
-    return None
-
-
 if __name__ == '__main__':
     import python_ta
     python_ta.check_all(config={
         'max-line-length': 120,
-        'extra-imports': ['time', 'genre_tree', 'song_graph', 'graph_visualization'],
+        'extra-imports': ['time', 'genre_tree', 'song_graph', 'graph_visualization', 'recommender'],
         'allowed-io': ['run_console', '_collect_genres', '_collect_viral',
                        '_collect_energy', '_collect_count', '_should_add_another'],
     })

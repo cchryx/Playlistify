@@ -21,28 +21,32 @@ def main() -> None:
     print("  [2] Console Version (Text-based Interface)")
     print("  [q] Quit")
 
-    choice = input("\nSelection: ").strip().lower()
+    while True:
+        choice = input("\nSelection: ").strip().lower()
 
-    if choice == '1':
-        print("\nLaunching GUI... Please wait.")
-        gui.run_gui()
-    elif choice == '2':
-        print("\nLaunching Console Interface...\n")
-        console_version.run_console()
-    elif choice == 'q':
-        print("Goodbye!")
-        sys.exit()
-    else:
-        print("\nInvalid choice. Please enter 1, 2, or q.")
-        main()
+        if choice == '1':
+            print("\nLaunching GUI... Please wait.")
+            gui.run_gui()
+            return
+        elif choice == '2':
+            print("\nLaunching Console Interface...\n")
+            console_version.run_console()
+            return
+        elif choice == 'q':
+            print("Goodbye!")
+            sys.exit()
+        else:
+            print("Invalid choice. Please enter 1, 2, or q.")
 
 
 if __name__ == '__main__':
-    import python_ta
-    python_ta.check_all(config={
-        'max-line-length': 120,
-        'extra-imports': ['gui', 'console_version', 'sys'],
-        'allowed-io': ['main'],
-    })
+    # To check this file with python_ta, uncomment the following lines.
+    # They are commented out so that PythonTA does not run every time the app starts.
+    # import python_ta
+    # python_ta.check_all(config={
+    #     'max-line-length': 120,
+    #     'extra-imports': ['gui', 'console_version', 'sys'],
+    #     'allowed-io': ['main'],
+    # })
 
     main()

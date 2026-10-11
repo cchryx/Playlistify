@@ -45,7 +45,30 @@ def build_graph_nx(seed_songs: list[Song],
     for song in seed_songs:
         _add_neighbours_to_graph(song, song_graph, graph_nx, colours, final_songs)
 
+    # add final songs that are not neighbours of any seed
+    _add_other_final_songs(seed_songs, song_graph, graph_nx, colours, final_songs)
+
     return graph_nx, colours
+
+
+def _add_other_final_songs(seed_songs: list[Song], song_graph: SongGraph,
+                           graph_nx: nx.Graph, colours: dict,
+                           final_songs: set[Song]) -> None:
+    """Add each final song that is not yet in graph_nx, linked to its most similar seed.
+
+    These songs were added to fill the playlist, so they are not graph neighbours
+    of any seed. The edge weight is their cosine similarity to that seed.
+    """
+    if not seed_songs:
+        return
+    for song in final_songs:
+        if song.track_id in graph_nx:
+            continue
+        closest = max(seed_songs, key=lambda seed: song_graph.get_cosine_similarity(song, seed))
+        graph_nx.add_node(song.track_id, song=song)
+        colours[song.track_id] = FINAL_COLOUR
+        graph_nx.add_edge(closest.track_id, song.track_id,
+                          weight=song_graph.get_cosine_similarity(song, closest))
 
 
 def _add_neighbours_to_graph(song: Song, song_graph: SongGraph,

@@ -167,7 +167,8 @@ class GenreTree:
 
         Do nothing if the given subtree is empty.
         """
-        self._subtrees.append(subtree)
+        if not subtree.is_empty():
+            self._subtrees.append(subtree)
 
     def get_subtrees(self) -> list[GenreTree]:
         """Return the list of subtrees (sub-genres) of this Genre_Tree."""
@@ -240,17 +241,13 @@ def load_genre_tree(data: str) -> GenreTree:
     Each song in the CSV is added to the node matching its genre label.
     Songs whose genre does not appear in the hierarchy are skipped.
 
-    The CSV is expected to have track_id at column index 2 and genre at column index 6.
+    The CSV must have a header row with 'track_id' and 'genre' columns.
     """
     tree = build_genre_tree()
 
     with open(data, encoding='utf-8') as file:
-        reader = csv.reader(file)
-        next(reader)  # Skip header row
-        for row in reader:
-            track_id = row[3]
-            genre = row[6]
-            tree.add_song(genre, track_id)
+        for row in csv.DictReader(file):
+            tree.add_song(row['genre'], row['track_id'])
 
     return tree
 

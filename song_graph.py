@@ -10,8 +10,8 @@ Copyright (c) 2026 Xing Xu Chen, Tianqi Pan, Norah Liu, Denise Ma
 from __future__ import annotations
 
 import csv
-import math
 from dataclasses import dataclass
+from typing import Optional
 
 import numpy
 
@@ -126,17 +126,26 @@ class _SongVertex:
         return len(self.neighbours)
 
 
-@dataclass
 class SongGraph:
     """A graph representing a music network where nodes are songs."""
     # Private Instance Attributes:
     #     - _vertices: A collection of the vertices contained in this graph.
-    #             Maps song track_id to the _Vertex object.
+    #             Maps each Song to its _SongVertex object.
+    #     - _songs_by_id: Maps each song's track_id to the Song object.
+    #     - _unit_matrix: Cached matrix of normalized feature vectors with length 1,
+    #             one row per song, or None if it must be recomputed.
+    #     - _row_index: Maps each Song to its row in _unit_matrix.
     _vertices: dict[Song, _SongVertex]
+    _songs_by_id: dict[str, Song]
+    _unit_matrix: Optional[numpy.ndarray]
+    _row_index: dict[Song, int]
 
     def __init__(self) -> None:
         """Initialize an empty graph (no vertices or edges)."""
         self._vertices = {}
+        self._songs_by_id = {}
+        self._unit_matrix = None
+        self._row_index = {}
 
     def add_vertex(self, song: Song) -> None:
         """Add a vertex representing the given song to this graph.
@@ -145,6 +154,12 @@ class SongGraph:
         """
         if song not in self._vertices:
             self._vertices[song] = _SongVertex(song)
+            self._songs_by_id[song.track_id] = song
+            self._unit_matrix = None  # The cached matrix is now out of date
+
+    def get_song_by_id(self, track_id: str) -> Optional[Song]:
+        """Return the Song in this graph with the given track_id, or None if there is none."""
+        return self._songs_by_id.get(track_id)
 
     def add_edge(self, song1: Song, song2: Song, weight: float) -> None:
         """Add an undirected edge between song1 and song2 with the given weight.
@@ -217,6 +232,9 @@ class SongGraph:
         features with large ranges (e.g. tempo, loudness) do not dominate
         the cosine similarity calculation.
         """
+        if not self._vertices:
+            return numpy.zeros((0, 8))
+
         matrix = numpy.array([
             [v.item.features.danceability, v.item.features.energy, v.item.features.valence,
              v.item.technical.tempo, v.item.features.acousticness, v.item.features.instrumentalness,
@@ -233,127 +251,117 @@ class SongGraph:
 
         return matrix
 
-    # This get_cosine_similarity funtion is too slow for computing matrix multiplication.
-    # We are using numpy functions intead.
+    def get_unit_matrix(self) -> numpy.ndarray:
+        """Return the normalized feature matrix with every row scaled to length 1.
+
+        Row i belongs to the i-th song of self.get_all_songs(). Because every row has
+        length 1, the dot product of two rows is the cosine similarity of the two songs.
+        The result is cached until a new vertex is added.
+        """
+        if self._unit_matrix is None:
+            matrix = self.get_feature_matrix()
+            norms = numpy.linalg.norm(matrix, axis=1, keepdims=True)
+            norms[norms == 0] = 1  # Avoid division by zero for all-zero rows
+            self._unit_matrix = matrix / norms
+            self._row_index = {song: i for i, song in enumerate(self._vertices)}
+        return self._unit_matrix
+
     def get_cosine_similarity(self, song1: Song, song2: Song) -> float:
         """Return the cosine similarity between two songs, as a float in [0.0, 1.0].
 
         Raises a ValueError if song1 or song2 do not appear as vertices in this graph.
 
-        The following audio features are used to construct each song's feature vector:
-        danceability, energy, valence, tempo, acousticness, instrumentalness,
-        loudness, and speechiness.
+        Uses the same normalized features as the graph edges: danceability, energy,
+        valence, tempo, acousticness, instrumentalness, loudness, and speechiness.
         """
         if song1 in self._vertices and song2 in self._vertices:
-            song1_item = self._vertices[song1].item  # was song2
-            song2_item = self._vertices[song2].item
-            vector1 = [song1_item.features.danceability,
-                       song1_item.features.energy,
-                       song1_item.features.valence,
-                       song1_item.technical.tempo,
-                       song1_item.features.acousticness,
-                       song1_item.features.instrumentalness,
-                       song1_item.technical.loudness,
-                       song1_item.features.speechiness]
-            vector2 = [song2_item.features.danceability,
-                       song2_item.features.energy,
-                       song2_item.features.valence,
-                       song2_item.technical.tempo,
-                       song2_item.features.acousticness,
-                       song2_item.features.instrumentalness,
-                       song2_item.technical.loudness,
-                       song2_item.features.speechiness]
-
-            dot_product = sum(vector1[i] * vector2[i] for i in range(len(vector1)))
-
-            norm_1 = math.sqrt(sum(v ** 2 for v in vector1))
-            norm_2 = math.sqrt(sum(v ** 2 for v in vector2))
-
-            if norm_1 == 0 or norm_2 == 0:
-                return 0.0
-            else:
-                return round(dot_product / (norm_1 * norm_2), 3)
+            unit = self.get_unit_matrix()
+            value = float(unit[self._row_index[song1]] @ unit[self._row_index[song2]])
+            return round(min(max(value, 0.0), 1.0), 3)
         else:
             raise ValueError
 
 
-def _load_vertices(song_graph: SongGraph, rows: list) -> None:
-    """Add a vertex to song_graph for each song row in rows."""
+def _load_vertices(song_graph: SongGraph, rows: list[dict[str, str]]) -> None:
+    """Add a vertex to song_graph for each song row in rows.
+
+    Each row maps a CSV column name to its value. Columns are looked up by name,
+    so the column order of the CSV file does not matter.
+    """
     for song in rows:
         mood = AudioMood(
-            danceability=float(song[7]),
-            energy=float(song[8]),
-            speechiness=float(song[12]),
-            acousticness=float(song[13]),
-            instrumentalness=float(song[14]),
-            liveness=float(song[15]),
-            valence=float(song[16]),
+            danceability=float(song['danceability']),
+            energy=float(song['energy']),
+            speechiness=float(song['speechiness']),
+            acousticness=float(song['acousticness']),
+            instrumentalness=float(song['instrumentalness']),
+            liveness=float(song['liveness']),
+            valence=float(song['valence']),
         )
         technical = AudioTechnical(
-            key=int(song[9]),
-            loudness=float(song[10]),
-            mode=int(song[11]),
-            tempo=float(song[17]),
-            duration_ms=int(song[18]),
-            time_signature=int(song[19]),
+            key=int(song['key']),
+            loudness=float(song['loudness']),
+            mode=int(song['mode']),
+            tempo=float(song['tempo']),
+            duration_ms=int(song['duration_ms']),
+            time_signature=int(song['time_signature']),
         )
         song_object = Song(
-            artist_name=song[1],
-            track_name=song[2],
-            track_id=song[3],
-            popularity=int(song[4]),
-            genre=song[6],
+            artist_name=song['artist_name'],
+            track_name=song['track_name'],
+            track_id=song['track_id'],
+            popularity=int(song['popularity']),
+            genre=song['genre'],
             features=mood,
             technical=technical,
         )
         song_graph.add_vertex(song_object)
 
 
-def _load_edges(song_graph: SongGraph, similarity_threshold: float) -> None:
-    """Add edges between songs in song_graph whose cosine similarity meets the threshold."""
+def _load_edges(song_graph: SongGraph, similarity_threshold: float, block_size: int = 1000) -> None:
+    """Add edges between songs in song_graph whose cosine similarity meets the threshold.
+
+    The similarity matrix is computed block_size rows at a time. This keeps memory use
+    low and avoids looping over every pair of songs in Python.
+
+    Preconditions:
+        - block_size > 0
+    """
     all_songs = song_graph.get_all_songs()
-    feature_matrix = song_graph.get_feature_matrix()
 
-    # Compute the L2 norm of each song's feature vector (one scalar per row).
-    # keepdims=True preserves the (n_songs, 1) shape so broadcasting works correctly
-    # when dividing the matrix in the next step.
-    norms = numpy.linalg.norm(feature_matrix, axis=1, keepdims=True)
+    # Every row of the unit matrix has length 1, so the dot product of two rows
+    # is the cosine similarity of the two songs.
+    unit = song_graph.get_unit_matrix()
 
-    # Divide each row by its norm to produce unit vectors. After this step every
-    # song's feature vector has length 1, so the dot product between any two rows
-    # equals their cosine similarity directly.
-    normalized = feature_matrix / norms
-
-    # Multiply the normalized matrix by its own transpose to compute all pairwise
-    # cosine similarities at once. The result is a symmetric (n_songs, n_songs)
-    # matrix where entry [i][j] is the cosine similarity between song i and song j.
-    # This is significantly faster than computing each pair individually in a loop.
-    sim_matrix = normalized @ normalized.T  # Shape: (n_songs, n_songs)
-
-    for i in range(len(all_songs)):
-        for j in range(i + 1, len(all_songs)):
-            similarity = round(float(sim_matrix[i][j]), 3)
-            if similarity >= similarity_threshold:
-                song_graph.add_edge(all_songs[i], all_songs[j], similarity)
+    for start in range(0, len(all_songs), block_size):
+        # Similarities between songs start..start+block_size and every song.
+        block = numpy.round(unit[start:start + block_size] @ unit.T, 3)
+        rows, cols = numpy.nonzero(block >= similarity_threshold)
+        for r, c in zip(rows.tolist(), cols.tolist()):
+            i = start + r
+            if c > i:  # Add each pair once and skip self-loops
+                song_graph.add_edge(all_songs[i], all_songs[c], float(block[r, c]))
 
 
 def load_song_graph(song_file: str, similarity_threshold: float = 0.99) -> SongGraph:
     """Return a SongGraph loaded from song_file, with edges between songs whose
     cosine similarity is at or above similarity_threshold.
 
+    song_file must be the path to a CSV file whose first row is the column names, and which
+    has the columns artist_name, track_name, track_id, popularity, genre, danceability,
+    energy, key, loudness, mode, speechiness, acousticness, instrumentalness, liveness,
+    valence, tempo, duration_ms, and time_signature.
+
     Preconditions:
-        - song_file is the path to a CSV file where the first row is headers and
-          each subsequent row contains song data in the order defined by the Song dataclass.
         - 0.0 <= similarity_threshold <= 1.0
     """
     song_graph = SongGraph()
 
     with open(song_file, encoding='utf-8') as file:
-        reader = csv.reader(file)
-        next(reader)
-        rows = list(reader)
-        _load_vertices(song_graph, rows)
-        _load_edges(song_graph, similarity_threshold)
+        rows = list(csv.DictReader(file))
+
+    _load_vertices(song_graph, rows)
+    _load_edges(song_graph, similarity_threshold)
 
     return song_graph
 
@@ -365,7 +373,7 @@ if __name__ == "__main__":
     import python_ta
     python_ta.check_all(config={
         'max-line-length': 120,
-        'extra-imports': ['numpy', 'math', 'csv'],
+        'extra-imports': ['numpy', 'csv'],
         'allowed-io': ['load_song_graph'],
         'disable': []
     })

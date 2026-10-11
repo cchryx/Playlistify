@@ -1066,6 +1066,7 @@ class PlaylistifyApp(tk.Tk):
         elif self._tree_genre is None or self._graph_song is None:
             self.gen_status.configure(
                 text="Loading song data — this takes a few seconds…", fg=TEXT_DIM)
+            # noinspection PyTypeChecker
             self.after(200, self._wait_for_data)
         else:
             self._build_playlist(self._tree_genre, self._graph_song)
